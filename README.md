@@ -2,16 +2,19 @@
 
 [中文版](#auto-vqe-自动量子物理学家)
 
-An experiment to let LLMs automatically explore quantum circuit structures (Ansatz) to approximate the ground state energy of the 1D Transverse Field Ising Model (TFIM).
+An experiment to let LLMs automatically explore quantum circuit structures (Ansatz) to approximate the ground state energy of quantum systems such as the 1D Transverse Field Ising Model (TFIM) and LiH.
 
 ## Overview
 
-The goal of this project is to use AI agents to iteratively design and optimize quantum circuits. The agent explores the "Conjecture" space (`ansatz.py`) while being constrained by "Objective Reality" (`environment.py`).
+The goal of this project is to use AI agents to iteratively design and optimize quantum circuits.  
+The agent explores the "Conjecture" space (ansatz definitions in `experiments/*/run.py`) while being constrained by "Objective Reality" (Hamiltonians in `experiments/*/env.py` and the shared environment base class in `core/base_env.py`).
 
 ## Core Components
 
-- **`environment.py` (Objective Reality)**: Defines the physical laws (4-qubit TFIM) and evaluation constraints. This file is **read-only** for the AI agent.
-- **`ansatz.py` (The Conjecture)**: The mutable laboratory where the AI agent modifies circuit structures, gate types, and optimizer logic.
+- **`core/base_env.py` (Objective Reality base)**: Defines the abstract `QuantumEnvironment` with immutable physical laws (name, qubit count, exact energy).
+- **`experiments/tfim/env.py`, `experiments/lih/env.py` (Concrete Objective Reality)**: Implement specific Hamiltonians (4-qubit TFIM, LiH in a Pauli basis). These files are **read-only** for the AI agent.
+- **`experiments/tfim/run.py`, `experiments/lih/run.py` (The Conjecture)**: Contain the ansatz construction (`create_circuit`) and experiment loop for each system. This is where the agent can modify circuit structures, gate types, and optimizer logic.
+- **`core/engine.py`**: Provides the reusable VQE training loop, logging utilities, and automatic experiment report generation.
 - **`program.md`**: The experimental protocol and rules guiding the AI's exploration.
 
 ## Key Principles
@@ -27,10 +30,46 @@ The goal of this project is to use AI agents to iteratively design and optimize 
 
 Ensure you have [uv](https://github.com/astral-sh/uv) installed.
 
+### Install dependencies
+
 ```bash
-# Run the VQE optimization
-uv run python ansatz.py
+uv sync
 ```
+
+### Run TFIM experiment
+
+```bash
+uv run python experiments/tfim/run.py
+```
+
+### Run LiH experiment
+
+```bash
+uv run python experiments/lih/run.py
+```
+
+Both experiments will:
+
+- write detailed optimization logs to `experiments/<system>/vqe_*.log`
+- append summary rows to `experiments/<system>/results.tsv`
+- generate human-readable Markdown reports and circuit visualizations in the same directory
+
+### Run simple ansatz search (experimental)
+
+For automatic exploration over a small, discrete ansatz space:
+
+```bash
+# TFIM: vary the number of layers
+uv run python experiments/tfim/search.py
+
+# LiH: vary the number of layers and whether to use HF initialization
+uv run python experiments/lih/search.py
+```
+
+These search scripts call a shared `ansatz_search` helper in `core/engine.py` and apply an Occam-style ranking:
+
+- primarily minimize `val_energy`
+- for nearly-equal energies (difference < 1e-4), prefer ansatz with fewer parameters (`num_params`)
 
 ---
 
@@ -38,17 +77,20 @@ uv run python ansatz.py
 
 [English Version](#auto-vqe-automatic-variational-quantum-eigensolver)
 
-这是一个让 LLM 自动探索量子线路结构（Ansatz）以逼近一维横场伊辛模型 (TFIM) 基态能量的实验。
+这是一个让 LLM 自动探索量子线路结构（Ansatz）以逼近量子体系（例如一维横场伊辛模型 TFIM、LiH）基态能量的实验。
 
 ## 项目概览
 
-本项目旨在通过 AI Agent 迭代设计和优化量子线路。Agent 在“客观现实”（`environment.py`）的约束下，探索“假设空间”（`ansatz.py`）。
+本项目旨在通过 AI Agent 迭代设计和优化量子线路。  
+Agent 在“客观现实”（`core/base_env.py` 以及 `experiments/*/env.py` 中的哈密顿量）的约束下，探索“假设空间”（`experiments/*/run.py` 中的 ansatz 定义）。
 
 ## 核心组件
 
-- **`environment.py` (客观现实)**: 定义了物理定律（4 量子比特 TFIM）和评估约束。此文件对 AI Agent 是**只读**的。
-- **`ansatz.py` (猜想空间)**: AI Agent 进行实验的实验室，可以自由修改线路结构、门类型和优化器逻辑。
-- **`program.md`**: 指导 AI 探索的实验手册和规则。
+- **`core/base_env.py`（客观现实基类）**：定义抽象的 `QuantumEnvironment`，包含体系名称、量子比特数、精确能量等只读物理信息。
+- **`experiments/tfim/env.py`、`experiments/lih/env.py`（具体客观现实）**：实现特定体系的哈密顿量（4 量子比特 TFIM、LiH 的 Pauli 展开）。这些文件对 AI Agent **只读**。
+- **`experiments/tfim/run.py`、`experiments/lih/run.py`（猜想空间）**：包含 ansatz 构造函数 `create_circuit` 以及实验主循环，是 AI 可以修改线路结构、门类型和优化策略的主要场所。
+- **`core/engine.py`**：提供通用的 VQE 训练循环、日志记录与自动报告生成。
+- **`program.md`**：指导 AI 探索的实验手册和规则。
 
 ## 核心原则
 
@@ -63,7 +105,26 @@ uv run python ansatz.py
 
 确保已安装 [uv](https://github.com/astral-sh/uv)。
 
+### 安装依赖
+
 ```bash
-# 运行 VQE 优化
-uv run python ansatz.py
+uv sync
 ```
+
+### 运行 TFIM 实验
+
+```bash
+uv run python experiments/tfim/run.py
+```
+
+### 运行 LiH 实验
+
+```bash
+uv run python experiments/lih/run.py
+```
+
+上述命令会：
+
+- 在 `experiments/<system>/` 下写入优化日志 `vqe_*.log`
+- 追加实验摘要到 `results.tsv`
+- 自动生成 Markdown 报告与量子线路可视化图像

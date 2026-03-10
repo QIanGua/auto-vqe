@@ -8,3 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Experiment artifacts (logs, reports, plots, raw circuits)
+experiments/*/*.log
+experiments/*/results.tsv
+experiments/*/report_*.md
+experiments/*/circuit_*.png
+experiments/*/circuit_*.json
