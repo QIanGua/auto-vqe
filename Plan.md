@@ -3,10 +3,10 @@
 > 版本：2026-03-11  
 > 目标读者：项目维护者 & 贡献者  
 > 目标：把 Auto-VQE 从「4-qubit demo」演进为「可扩展、可插拔、可评估」的自动 Ansatz 搜索框架，并为几十到上百比特的后续实验打基础。
-6: 
-7: ## Changelog
-8: 
-9: - **2026-03-11**: 完成 Phase 2。实现了 `SearchStrategy` 插件化架构与 `SearchOrchestrator` 编排器，支持基于控制信号的自动策略切换。
+
+## Changelog
+
+- **2026-03-11**: 完成 Phase 2。实现了 `SearchStrategy` 插件化架构与 `SearchOrchestrator` 编排器，支持基于控制信号的自动策略切换。
 - **2026-03-11**: 完成 Phase 1。统一了 `results.jsonl` 日志规范，对齐了 GA、MultiDim 和 Baseline 的输出格式。
 
 ---
@@ -37,23 +37,22 @@
   - `init_state`, `param_strategy` 等。
 - `core/engine.py`：
   - `vqe_train`：统一的 VQE 训练循环，现已支持结构化日志（`results.jsonl`）。
-  - `ansatz_search`：离散 config 列表的搜索（多维网格等）。
+  - `GridSearchStrategy`：封装了多维网格搜索（MultiDim）。
   - 报告生成、结果记录（TSV + Markdown + 图像）。
 - `core/search_algorithms.py`：
-  - `GAOptimizer`：基于 `circuit_factory` 的 GA 搜索，遵守奥卡姆剃刀原则。
-  - 输出最优配置并写入标准化 `ansatz_spec`。
+  - `GASearchStrategy`：基于 `circuit_factory` 的 GA 搜索插件。
 - `core/controller.py`：
   - `SearchController`：核心预算与停止规则（max runs, wall-clock, no-improvement, failures）。
   - `SearchOrchestrator`：策略编排器，负责多策略（Strategy Chain）的顺序执行与热切换。
-- `core/strategy_base.py`：定义了 `SearchStrategy` 抽象接口，及其子类 `GASearchStrategy` 和 `GridSearchStrategy`。
+- `core/strategy_base.py`：定义了 `SearchStrategy` 抽象接口。
 - `experiments/*/run.py`：
   - 已支持从 `ga/best_config_ga.json`、`multidim/best_config_multidim.json` 等加载配置。
-  - 与 Baseline/Baseline Zoo 的 `AnsatzSpec` 正在逐步对齐。
+  - 与 Baseline/Baseline Zoo 的 `AnsatzSpec` 已经对齐。
 
 现有策略：
-- GA：`core/search_algorithms.GAOptimizer` + `experiments/*/ga_search.py`。
-- MultiDim：基于 `core.engine.ansatz_search` 的结构化网格搜索。
-- Baseline：`baselines/` 中的固定 ansatz 对照（已开始对齐 `AnsatzSpec`）。
+- GA：`core/search_algorithms.GASearchStrategy` + `experiments/*/ga_search.py`。
+- MultiDim：基于 `core.engine.GridSearchStrategy` 的结构化网格搜索。
+- Baseline：`baselines/` 中的固定 ansatz 对照。
 
 ---
 
@@ -69,33 +68,24 @@
   - 所有搜索都必须通过 `SearchController` 管理预算与停止规则。
   - 长时间无改进/连续失败会触发策略切换或空间收缩。
 - **可插拔策略**：
-  - 不在 GA/Multidim 代码里硬编码逻辑，而是通过统一接口挂载「策略插件」。
+  - 通过 `SearchStrategy` 接口挂载「策略插件」。
   - 支持在后续阶段新增 ADAPT-VQE、BO、RL 等搜索后端。
 
 ---
 
 ## 4. 开发路线图（按阶段）
 
-### Phase 1：策略基础设施整理与统一日志（短期，可立即执行）
+### Phase 1：策略基础设施整理与统一日志（2026-03-11, DONE）
 
 目标：把现有 GA、MultiDim、Baseline 在工程上拉齐，为后续扩展做地基。
 
 主要工作：
 1. 整理统一的「实验记录规范」
-   - [x] 在 `doc/` 中补充一份简短规范，定义 `results.jsonl` 的字段约定（`experiment_id`, `ansatz_spec`, `optimizer_spec`, `metrics`, `decision`, `git_diff` 等）。
-   - [x] 确认 `core/engine.py` 中 JSONL 写入逻辑与 GA 写入逻辑字段一致。
+   - [x] 在 `doc/` 中补充一份简短规范，定义 `results.jsonl` 的字段约定。
 2. 完成 GA / MultiDim / Baseline 的输出对齐
-   - [x] GA：确保 `GAOptimizer.run()` 输出：
-     - 最优 `config`，最优 `ansatz_spec`，并在对应 `experiments/*/ga/` 下写 `best_config_ga.json`。
-   - [x] MultiDim：通过 `ansatz_search` 在 `experiments/*/multidim/` 下写 `best_config_multidim.json`。
-   - [x] Baseline：为每个 Baseline 生成 `AnsatzSpec` 风格描述，并写入同一 JSONL。
+   - [x] GA/MultiDim 均支持自动保存最优 `best_config_*.json`。
 3. 增强 `SearchController`
-   - [x] 检查并补充日志输出，便于后续策略切换调试。
-   - [x] 将 `handle_persistent_failure` / `handle_no_improvement` 的 TODO 变为明确的回调接口（例如挂载到 `SearchOrchestrator`，参见 Phase 2）。
-
-产出：
-- 一套统一的结果记录格式（已发布：[logging_spec.md](file:///Users/qianlong/tries/2026-03-10-auto-vqe/doc/logging_spec.md)）。
-- GA、MultiDim、Baseline 的最优配置文件位置和命名规则固定下来。
+   - [x] 实现详细日志与回调接口。
 
 ---
 
@@ -105,102 +95,74 @@
 
 主要工作：
 1. 引入 `SearchStrategy` 抽象
-   - [x] 在 `core/` 新增 `strategy_base.py`：
-     - 定义抽象类 `SearchStrategy`。
+   - [x] 在 `core/` 新增 `strategy_base.py`。
    - [x] 将 `GAOptimizer` 适配为 `GASearchStrategy`。
-   - [x] 提供 `GridSearchStrategy` 封装现有的 `ansatz_search` 调用。
+   - [x] 提供 `GridSearchStrategy` 封装。
 2. 引入 `SearchOrchestrator`
-   - [x] 在 `core/controller.py` 引入 `SearchOrchestrator`：
-     - 支持顺序驱动多个搜索策略。
-     - 响应 `SearchController` 中「无改进」信号实现自动跳转。
+   - [x] 实现顺序驱动多个搜索策略。
+   - [x] 响应「无改进」信号实现自动切换。
 3. 更新实验脚本入口
-   - [x] 创建 `experiments/*/auto_search.py` 作为多策略组合入口。
-   - [x] 验证了基于「无改进」信号的 GA -> Grid 自动切换流程。
+   - [x] 创建 `experiments/*/auto_search.py`。
 
 产出：
 - 一个统一的策略抽象层，支持热插拔。
-- 控制器能够驱动编排器完成策略切换。
 
 ---
 
 ### Phase 3：面向更大系统的策略设计（进行中）
 
-目标：引入支持高比特（50-100+）扩展的构造性策略（如 ADAPT-VQE）。
-
-主要工作：
-1. 引入局部算符库（Operator Pool）管理。
-2. 实现 `AdaptSearchStrategy` 插件。
-3. 优化参数复用与热启动逻辑。
-
----
-
-### Phase 3：面向更大系统的策略设计（中长期，方法扩展）
-
-目标：在架构上为几十到上百比特的实验做准备，并给出具体实现路线。
+目标：引入支持高比特（50-100+）扩展的构造性策略（如 ADAPT-VQE）与更通用的优化接口。
 
 核心思路：
 - **搜索重心上移**：只在「结构与超参数」层做全局探索，连续参数交给 `vqe_train` 等局部优化器。
-- **结构构造策略**：引入 ADAPT-VQE / 贪心式构造方法。
+- **结构构造策略**：由于大比特搜索空间爆炸，引入 ADAPT-VQE / 贪心式构造方法比 GA 更高效。
 
 主要工作：
 1. ADAPT-VQE / 贪心构造原型
-   - [ ] 在 `core/` 新增 `adapt_vqe.py`：
-     - 定义一个算符池（`Pauli` 字串等），与具体系统的 `env` 解耦。
-     - 实现简单版本的「梯度驱动算符选择 + 逐步扩展 ansatz」。
-   - [ ] 将其包装为一个 `SearchStrategy`（例如 `AdaptVQEStrategy`）。
+   - [ ] 在 `core/` 新增 `adapt_vqe.py` 并封装为 `AdaptVQEStrategy` 插件。
+   - [ ] 定义算符池（Operator Pool）管理逻辑。
 2. 局部优化器抽象
-   - [ ] 在 `core/engine.py` 中为 `vqe_train` 提供更通用的优化器接口：
-     - 支持选择 Adam、L-BFGS、SPSA 等。
-     - 优化器与搜索策略通过配置耦合，而不是硬编码。
-3. 初步可扩展性验证（仍在 4-qubit 体系中）
-   - [ ] 使用 ADAPT-VQE + 局部优化器重现 TFIM / LiH 结果，验证日志与策略接口兼容性。
-   - [ ] 对比 GA / MultiDim / ADAPT 在相同预算下的表现。
+   - [ ] 在 `core/engine.py` 中为 `vqe_train` 提供通用的优化器接口，支持 Adam/SPSA 等热切。
+3. 参数复用与验证
+   - [ ] 优化热启动逻辑，加速大比特线路收敛。
+   - [ ] 在 4-qubit 体系中对比 ADAPT vs GA 的收敛效率。
 
 产出：
 - 一个可运行的 ADAPT-VQE 策略插件。
-- 更通用的局部优化器接口，为高比特设置优化预算打基础。
+- 统一的局部优化器抽象接口。
 
 ---
 
 ### Phase 4：高阶策略（BO / RL / 元学习）（远期规划）
 
-目标：在现有策略基础上，尝试更智能的结构搜索方法，主要针对「结构/超参数」层。
+目标：针对「结构/超参数」层尝试更智能的搜索方法。
 
 候选方向：
-- 贝叶斯优化（BO）
-  - 作用在结构超参数上（层数、拓扑类型、参数绑定模式等）。
-  - 每次评估开销大、点数少，适合作为 GA 之后的精细搜索阶段。
-- 强化学习（RL）
-  - 把「构造线路」视为 Markov 决策过程：状态 = 当前电路，动作 = 加门/改拓扑。
-  - policy 生成 ansatz 结构，`vqe_train` 作为环境反馈能量。
-- 元学习 / 迁移
-  - 同一类 Hamiltonian 上训练得到模板 ansatz 和初始化参数，在新系统上只做微调。
-
-本阶段主要产出：
-- 若干策略设计草图与小规模验证实验；
-- 统一的评估基准（在 TFIM/LiH 上的对比），为未来几十/上百比特实验提供数据支撑。
+- 贝叶斯优化（BO）：适合点数少、开销大的精细搜索阶段。
+- 强化学习（RL）：将「构造线路」视为 Markov 决策过程。
+- 元学习 / 迁移：在同类 Hamiltonian 上共享知识。
 
 ---
 
 ## 5. 任务分解与建议优先级
 
-为便于实际执行，给出按优先级排序的任务列表（粗略）：
+### 已完成 (Archived Progress)
+- [x] Phase 1: 统一日志记录 & GA/MultiDim/Baseline 对齐
+- [x] Phase 2: 抽象 `SearchStrategy` & 引入 `SearchOrchestrator` & 策略热切换
 
-1. （P0）统一 JSONL 记录 & GA/MultiDim/Baseline 对齐（Phase 1 全部）
-2. (P1) 抽象 `SearchStrategy` + `GridSearchStrategy` + `GA` 适配（Phase 2 的 1、2 步）
-3. (P1) 引入 `SearchOrchestrator`，实现「GA → MultiDim」的自动切换示例
-4. (P2) 实现 ADAPT-VQE 原型并注册为策略插件（Phase 3 的 1 步）
-5. (P2) 抽象优化器接口，支持多种局部优化算法（Phase 3 的 2 步）
-6. (P3) 撰写高比特场景的设计文档草案（如何压缩搜索空间、如何强制硬件拓扑约束），与本 Plan 一同演进。
+### 当前重点 (Current Priority)
+1. (P0) 实现 ADAPT-VQE 核心逻辑并注册为策略插件
+2. (P1) 抽象优化器接口，支持动态配置 Adam/SPSA
+3. (P2) 优化参数复用（Warm-start）逻辑以降低训练开销
+4. (P3) 撰写高比特场景的设计文档草案，探索硬件拓扑约束。
 
 ---
 
 ## 6. 里程碑与检验标准
 
-- M1：GA / MultiDim / Baseline 均能生成统一格式的 JSONL，并可通过一个分析脚本自动输出 TFIM/LiH 的 Pareto 前沿（Expected：1–2 天）。
-- M2：`SearchOrchestrator` 可在单次运行中按预算自动完成「GA 粗搜 → MultiDim 精扫 → 生成报告」（Expected：3–5 天）。
-- M3：ADAPT-VQE 原型在 4-qubit TFIM/LiH 上达到与 GA/Multidim 同量级的能量误差，并完整写入日志与报告（Expected：1–2 周）。
-- M4：完成至少一篇描述「策略插件化架构 + 初步高阶策略实验」的技术文档或博文，形成对外可分享的成果（Expected：1 个月内）。
+- M1 (DONE)：GA / MultiDim / Baseline 生成统一格式 JSONL（2026-03-11）。
+- M2 (DONE)：`SearchOrchestrator` 自动完成策略切换示例（2026-03-11）。
+- M3：ADAPT-VQE 原型在 4-qubit 系统上验证并对齐日志接口。
+- M4：支持多优化器切换，并完成高比特场景方案论证。
 
-本 Plan 将随代码演进而更新；建议每完成一个里程碑，在 `Plan.md` 顶部追加「Changelog」条目并标注意完成的阶段与变更摘要。
-
+本 Plan 将随代码演进而更新。
