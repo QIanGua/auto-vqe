@@ -17,3 +17,10 @@ dependencies = [
     "openfermion>=1.7.1",
     "openfermionpyscf>=0.5",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::SyntaxWarning",
+    "ignore::DeprecationWarning:qiskit.*",
+    "ignore::RuntimeWarning:numpy.linalg.*",
+]

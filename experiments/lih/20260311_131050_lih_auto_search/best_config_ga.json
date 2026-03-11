@@ -1,9 +1,0 @@
-{
-    "init_state": "hf",
-    "layers": 2,
-    "single_qubit_gates": [
-        "ry"
-    ],
-    "two_qubit_gate": "cnot",
-    "entanglement": "ring"
-}

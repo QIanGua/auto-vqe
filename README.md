@@ -22,7 +22,9 @@ Agent-VQE is a **pluggable search framework** designed to let AI agents (LLMs or
 - **`core/circuit_factory.py` (The Compiler)**: Translates structured JSON configs into executable quantum circuits. This decouples the search logic from the implementation details.
 - **`core/engine.py` (The Valve)**: The unified VQE training loop and logging engine. It ensures every experiment follows the same evaluation and reporting standard.
 - **`doc/logging_spec.md`**: Defines the "Single Source of Truth" schema for experiment records.
-- **`doc/evaluation_protocol.md`**: Standardized evaluation rules (budgets, metrics, ranking).
+- **2026-03-11**: **基础设施堡垒化**。完成了 Phase 3 中的参数映射协议、优化器抽象、以及全面的自动化测试（Schema, Orchestrator, Parameter Mapping）。实现了实验产物与代码的完全解耦。
+- **2026-03-11**: 完成 Phase 3 中的规范化与审计增强。制定了 `evaluation_protocol.md` 与 `config_schema.md`，日志升级至 `schema 1.2`。
+ion rules (budgets, metrics, ranking).
 - **`doc/config_schema.md`**: Formal schema for Ansatz, SearchSpace, and Optimizer configurations.
 - **`program.md`**: The experimental protocol and rules guiding the AI's exploration.
 - **`baselines/` (Baseline Zoo)**: A standardized set of strong VQE baselines, each exposing `build_ansatz(env, config) -> AnsatzSpec`:
@@ -113,6 +115,17 @@ JSONL record capturing the full experiment context:
 - `git_info`: contains `commit` SHA, `dirty` status, and a short `diff_hash` of the local changes.
 - `git_diff`: patch of the current working tree vs. `HEAD`
 - `artifact_paths`: paths to report Markdown, circuit PNG/JSON, convergence plots
+- `schema_version`: current version is `1.2` (reflecting improved artifact decoupling and parameter mapping).
+
+### Infrastructure & Testing (The "Fortress")
+
+Agent-VQE now includes a comprehensive test suite to protect core behaviors:
+- **`tests/test_schemas.py`**: Ensures Pydantic enforcement for all configuration objects.
+- **`tests/test_parameter_mapping.py`**: Verifies that structural changes (like adding layers) preserve parameter identity and maintain physical consistency (Warm-start).
+- **`tests/test_orchestration.py`**: Validates the `SearchController` budget logic and strategy switching signals.
+- **`tests/benchmark_mapping.py`**: A dedicated benchmark to verify that identity mapping correctly replicates energy states across different depths.
+
+**Artifact Decoupling**: All experiment-generated binary/data files (PNG, JSONL, TSV, Log) are strictly ignored by Git to keep the repository lightweight. Use the `prepare_experiment_dir` utility to ensure your results are saved in isolated, timestamped folders outside the version-controlled source tree.
 
 This JSONL stream can be:
 

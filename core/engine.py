@@ -289,20 +289,39 @@ def vqe_train(
     if seed is not None:
         torch.manual_seed(seed)
 
+    # Default to OptimizerSpec if none provided
+    if optimizer_spec_obj is None:
+        optimizer_spec_obj = OptimizerSpec(lr=lr, max_steps=max_steps, early_stop_window=early_stop_window, early_stop_threshold=early_stop_threshold, grad_clip_norm=grad_clip_norm)
+
+    max_steps = optimizer_spec_obj.max_steps
+    lr = optimizer_spec_obj.lr
+    early_stop_window = optimizer_spec_obj.early_stop_window
+    early_stop_threshold = optimizer_spec_obj.early_stop_threshold
+    grad_clip_norm = optimizer_spec_obj.grad_clip_norm
+
     params = torch.randn(num_params, requires_grad=True)
-    optimizer = torch.optim.Adam([params], lr=lr)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', patience=100, factor=0.5, min_lr=1e-5
-    )
     
-    # If explicit spec provided, override defaults (Enforcement)
-    if optimizer_spec_obj:
-        max_steps = optimizer_spec_obj.max_steps
-        lr = optimizer_spec_obj.lr
-        early_stop_window = optimizer_spec_obj.early_stop_window
-        early_stop_threshold = optimizer_spec_obj.early_stop_threshold
-        grad_clip_norm = optimizer_spec_obj.grad_clip_norm
-        # Note: scheduler overrides would happen here if we had a more complex factory
+    # Optimizer initialization from Spec
+    if optimizer_spec_obj.method == "Adam":
+        optimizer = torch.optim.Adam([params], lr=lr)
+    else:
+        # Fallback to Adam if unknown, or extend here for SGD/LBFGS
+        optimizer = torch.optim.Adam([params], lr=lr)
+
+    # Scheduler initialization from Spec
+    sched_spec = optimizer_spec_obj.scheduler
+    if sched_spec and sched_spec.type == "ReduceLROnPlateau":
+        mode: Any = sched_spec.mode # Handle Literal typing
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, 
+            mode=mode, 
+            patience=sched_spec.patience, 
+            factor=sched_spec.factor, 
+            min_lr=sched_spec.min_lr
+        )
+    else:
+        # No-op scheduler
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: 1.0)
 
     start_time = time.time()
     energy_history = []

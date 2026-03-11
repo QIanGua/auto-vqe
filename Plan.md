@@ -122,14 +122,16 @@
    - [x] 日志 `results.jsonl` 加入 `schema_version: 1.1` 与环境指纹（Python, OS, 库版本）。
    - [x] 增强 Git 追踪（Commit SHA, Dirty status, Diff Hash）。
    - [x] 实验脚本 `run.py` 显式记录 `config_path_used`。
-3. **参数映射协议与 Warm-start (P1)**
-   - [ ] 定义显式的参数映射规则（结构编辑前后参数如何投影与继承）。
-   - [ ] 优化热启动逻辑，加速大比特线路收敛。
+3. **参数映射协议与 Warm-start (P1, DONE)**
+   - [x] 定义并实现了 `core/parameter_mapping.py`，规范 Warm-start 的参数继承行为。
+   - [x] 通过 `tests/benchmark_mapping.py` 验证了热启动在层数增加时的恒等性。
 4. **ADAPT-VQE / 贪心构造原型 (P1)**
    - [ ] 在 `core/` 新增 `adapt_vqe.py` 并封装为 `AdaptVQEStrategy` 插件。
    - [ ] 在 4-qubit 体系中基于统一协议对比 ADAPT vs GA 的收敛效率。
-5. **局部优化器抽象 (P1)**
-   - [ ] 在 `core/engine.py` 中为 `vqe_train` 提供通用的优化器接口，支持 Adam/SPSA 等热切。
+5. **局部优化器抽象 (P1, DONE)**
+   - [x] 在 `core/engine.py` 中为 `vqe_train` 提供通用的优化器接口，支持 `OptimizerSpec` 驱动。
+6. **自动化测试“护城河” (P0, NEW)**
+   - [x] 实现 `tests/test_schemas.py`, `test_parameter_mapping.py`, `test_orchestration.py`。
 
 产出：
 - 统一的评估协议文档与优化器抽象接口。

@@ -40,7 +40,16 @@ baseline-lih:
 baseline-tfim:
     uv run python experiments/tfim/baseline/baseline_run.py
 
-# 清理实验产生的临时文件 (日志, 结果, 报告, 图片)
+# 运行所有单元测试 (Schema, Orchestration, Parameter Mapping)
+test:
+    uv run pytest tests/
+
+# 运行参数映射基准测试 (Warm-start Verification)
+benchmark:
+    uv run python tests/benchmark_mapping.py
+
+# 清理实验产生的临时文件 (日志, 结果, 报告, 图片, 审计产物)
 clean:
-    rm -f experiments/lih/*/*.log experiments/lih/*/*.json experiments/lih/*/*.png experiments/lih/*/*.md experiments/lih/*/*.tsv
-    rm -f experiments/tfim/*/*.log experiments/tfim/*/*.json experiments/tfim/*/*.png experiments/tfim/*/*.md experiments/tfim/*/*.tsv
+    find experiments -type f \( -name "*.png" -o -name "*.jsonl" -o -name "*.tsv" -o -name "*.log" -o -name "*.patch" -o -name "report_*.md" -o -name "circuit_*.json" \) -delete
+    find experiments -type d -name "[0-9]*_*" -exec rm -rf {} +
+    find experiments -type d -name "audit" -exec rm -rf {} +
