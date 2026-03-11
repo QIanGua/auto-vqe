@@ -1,14 +1,14 @@
-![Auto-VQE Toriyama Edition](assets/article/toriyama_variation_4.png)
+![Agent-VQE Toriyama Edition](assets/article/toriyama_variation_4.png)
 
-# Auto-VQE (Automatic Variational Quantum Eigensolver)
+# Agent-VQE (Automatic Variational Quantum Eigensolver)
 
-[中文版](#auto-vqe-自动量子物理学家)
+[中文版](#agent-vqe-自动量子物理学家)
 
 An experiment to let LLMs automatically explore quantum circuit structures (Ansatz) to approximate the ground state energy of quantum systems such as the 1D Transverse Field Ising Model (TFIM) and LiH.
 
 ## Overview
 
-Auto-VQE is a **pluggable search framework** designed to let AI agents (LLMs or classical search algorithms) automatically design optimal quantum circuit structures (Ansatz). It bridges the gap between high-level "Conjectures" (ansatz definitions) and the "Objective Reality" of quantum Hamiltonians.
+Agent-VQE is a **pluggable search framework** designed to let AI agents (LLMs or classical search algorithms) automatically design optimal quantum circuit structures (Ansatz). It bridges the gap between high-level "Conjectures" (ansatz definitions) and the "Objective Reality" of quantum Hamiltonians.
 
 **Key Evolutions:**
 - **From Scripts to Framework**: No longer tied to a specific search algorithm; it provides a unified abstraction layer for any structural optimization strategy.
@@ -127,15 +127,15 @@ uv run python experiments/tfim/auto_search.py
 
 ---
 
-# Auto-VQE (自动量子变分求解员)
+# Agent-VQE (自动量子变分求解员)
 
-[English Version](#auto-vqe-automatic-variational-quantum-eigensolver)
+[English Version](#agent-vqe-automatic-variational-quantum-eigensolver)
 
 这是一个让 AI Agent 自动探索量子线路结构（Ansatz）以逼近量子体系（例如一维横场伊辛模型 TFIM、LiH）基态能量的实验。
 
 ## 项目概览
 
-Auto-VQE 是一个**可插拔的搜索框架**，旨在让 AI Agent（LLM 或经典搜索算法）自动设计最优量子线路结构（Ansatz）。它在“客观现实”（哈密顿量）与“猜想空间”（线路定义）之间建立了一个结构化的迭代反馈环。
+Agent-VQE 是一个**可插拔的搜索框架**，旨在让 AI Agent（LLM 或经典搜索算法）自动设计最优量子线路结构（Ansatz）。它在“客观现实”（哈密顿量）与“猜想空间”（线路定义）之间建立了一个结构化的迭代反馈环。
 
 **核心演进：**
 - **从脚本到框架**：不再绑定于特定算法。提供统一的抽象层，任何结构优化策略（GA、Grid、ADAPT-VQE 等）均可作为插件接入。

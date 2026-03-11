@@ -1,8 +1,8 @@
-# Auto-VQE 开发计划（Plan）
+# Agent-VQE 开发计划（Plan）
 
 > 版本：2026-03-11  
 > 目标读者：项目维护者 & 贡献者  
-> 目标：把 Auto-VQE 从「4-qubit demo」演进为「可扩展、可插拔、可评估」的自动 Ansatz 搜索框架，并为几十到上百比特的后续实验打基础。
+> 目标：把 Agent-VQE 从「4-qubit demo」演进为「可扩展、可插拔、可评估」的自动 Ansatz 搜索框架，并为几十到上百比特的后续实验打基础。
 
 ## Changelog
 
