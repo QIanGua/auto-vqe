@@ -1,3 +1,5 @@
+![Auto-VQE Toriyama Edition](assets/article/toriyama_variation_4.png)
+
 # Auto-VQE (Automatic Variational Quantum Eigensolver)
 
 [中文版](#auto-vqe-自动量子物理学家)
