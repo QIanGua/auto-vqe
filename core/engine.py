@@ -436,7 +436,7 @@ def ansatz_search(
             break
 
         cfg_str = summarize_config(config)
-        logger.info(f"\n--- Config {idx+idx}/{len(config_list)}: {cfg_str} ---")
+        logger.info(f"\n--- Config {idx+1}/{len(config_list)}: {cfg_str} ---")
 
         ansatz_obj = make_create_circuit_fn(config)
         # 支持两种返回形式：旧版 (create_circuit_fn, num_params) 或
