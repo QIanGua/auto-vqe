@@ -47,8 +47,12 @@ baseline-lih:
 baseline-tfim:
     uv run python experiments/tfim/baseline/baseline_run.py
 
-# 运行所有单元测试 (Schema, Orchestration, Parameter Mapping)
+# 运行所有不包含 @pytest.mark.slow 的快速单元测试 (Schema, Orchestration, Parameter Mapping)
 test:
+    PYTHONPATH=. uv run pytest -m "not slow" tests/
+
+# 运行所有单元测试，包含所有大型计算如 MPS
+test-all:
     PYTHONPATH=. uv run pytest tests/
 
 # 运行参数映射基准测试 (Warm-start Verification)

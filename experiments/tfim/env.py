@@ -7,9 +7,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from core.base_env import QuantumEnvironment
 
 class TFIMEnvironment(QuantumEnvironment):
-    def __init__(self, n_qubits=4):
+    def __init__(self, n_qubits=4, use_mps=False):
         # 4-qubit TFIM exact energy
-        super().__init__("TFIM", n_qubits, -4.758770)
+        super().__init__("TFIM", n_qubits, -4.758770, use_mps=use_mps)
 
     def compute_energy(self, c):
         import tensorcircuit as tc

@@ -174,8 +174,15 @@ def build_circuit_from_ansatz(
             # 假设每个 operator 1 个参数，或从 metadata/cost 获知
             total_params += 1 
 
+    use_mps = False
+    if ansatz.config:
+        use_mps = ansatz.config.get("use_mps", False)
+
     def create_circuit(params):
-        c = tc.Circuit(n_qubits)
+        if use_mps:
+            c = tc.MPSCircuit(n_qubits)
+        else:
+            c = tc.Circuit(n_qubits)
         idx = 0
         
         # 1. 应用 Legacy Config (如果存在)
@@ -374,8 +381,13 @@ def build_ansatz(
     if tq_gate not in valid_tq:
         raise ValueError(f"Unknown two-qubit gate: {tq_gate}. Valid: {valid_tq}")
 
+    use_mps = config.get("use_mps", False)
+
     def create_circuit(params):
-        c = tc.Circuit(n_qubits)
+        if use_mps:
+            c = tc.MPSCircuit(n_qubits)
+        else:
+            c = tc.Circuit(n_qubits)
 
         # ---- 初始态 ----
         if init_state == "hadamard":
