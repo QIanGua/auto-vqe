@@ -1,9 +1,0 @@
-{
-    "layers": 3,
-    "single_qubit_gates": [
-        "ry",
-        "rz"
-    ],
-    "two_qubit_gate": "cnot",
-    "entanglement": "linear"
-}
