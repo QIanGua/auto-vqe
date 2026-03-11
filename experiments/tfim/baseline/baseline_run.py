@@ -39,17 +39,16 @@ def run_baseline(trials: int = 5):
     """
     在固定 Baseline 配置上运行多次 VQE，并记录最优结果。
     """
-    exp_dir = os.path.dirname(__file__)
-    os.makedirs(exp_dir, exist_ok=True)
+    from core.engine import prepare_experiment_dir
+    base_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(base_dir, "tfim_baseline")
 
     # 使用 Baseline Zoo 中的 HEA 基线构造 ansatz，并持久化其结构化描述。
     hea_spec = build_hea(ENV)
     hea_spec_dict = hea_spec.to_logging_dict()
     save_baseline_config(exp_dir, hea_spec_dict)
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_path = os.path.join(exp_dir, f"baseline_tfim_{timestamp}.log")
-
+    log_path = os.path.join(exp_dir, "experiment.log")
     logger = setup_logger(log_path)
     logger.info("--- TFIM Baseline Experiment ---")
     logger.info(f"Baseline family: {hea_spec.family}, name: {hea_spec.name}")

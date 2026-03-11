@@ -38,8 +38,9 @@ def main(argv: list[str]) -> None:
     print(ANSATZ_CONFIG)
     print(f"\nScan settings: trials_per_R={trials_per_R}, max_steps={max_steps}, lr={lr}")
 
-    # 1) Run the geometry scan; this will generate a TSV file named
-    #    `lih_geometry_curve_<timestamp>.tsv` in `experiments/lih/`.
+    # 1) Run the geometry scan; this will generate a TSV file and return scan_results.
+    # We now need the exp_dir from the scan, but run_geometry_scan doesn't return it directly.
+    # However, it will be the latest lih_geom_scan_* directory.
     scan_results = run_geometry_scan(
         trials_per_R=trials_per_R,
         max_steps=max_steps,
@@ -49,8 +50,7 @@ def main(argv: list[str]) -> None:
         print("Geometry scan produced no results; aborting plot.")
         return
 
-    # 2) Plot the latest curve. We call `plot_geometry_curve.main` with a
-    #    single dummy argv entry so that it falls back to "auto-pick latest".
+    # 2) Plot the latest curve. 
     print("\nGeometry scan finished. Generating plots...")
     plot_geometry_curve.main(["plot_geometry_curve.py"])
 

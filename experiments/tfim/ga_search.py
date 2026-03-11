@@ -27,10 +27,13 @@ def run_ga_search():
         "param_strategy": ["independent", "tied"],
     }
 
-    exp_dir = os.path.dirname(__file__)
+    from core.engine import prepare_experiment_dir
+    base_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(base_dir, "tfim_ga_search")
     
-    # 运行遗传算法
-    return ga_search(
+    # 使用 GASearchStrategy 对象化方式运行
+    from core.search_algorithms import GASearchStrategy
+    strategy = GASearchStrategy(
         env=ENV,
         make_circuit_fn=make_tfim_circuit_fn,
         dimensions=dimensions,
@@ -42,9 +45,10 @@ def run_ga_search():
         max_steps=600,
         lr=0.01,
         exp_dir=exp_dir,
-        sub_dir="ga",
         base_exp_name="TFIM_GA_Search"
     )
+    
+    return strategy.run()
 
 if __name__ == "__main__":
     run_ga_search()

@@ -8,8 +8,8 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from core.search_algorithms import ga_search
-from core.circuit_factory import build_ansatz, SEARCH_DIMENSIONS
+from core.search_algorithms import GASearchStrategy
+from core.circuit_factory import build_ansatz
 from experiments.lih.env import ENV
 
 N_QUBITS = ENV.n_qubits
@@ -30,10 +30,12 @@ def run_ga_search():
         "entanglement": ["linear", "ring", "full"],
     }
 
-    exp_dir = os.path.dirname(__file__)
+    from core.engine import prepare_experiment_dir
+    base_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(base_dir, "lih_ga_search")
     
-    # 运行遗传算法
-    return ga_search(
+    # 使用 GASearchStrategy 对象化方式运行
+    strategy = GASearchStrategy(
         env=ENV,
         make_circuit_fn=make_lih_circuit_fn,
         dimensions=dimensions,
@@ -45,9 +47,10 @@ def run_ga_search():
         max_steps=600,
         lr=0.05,
         exp_dir=exp_dir,
-        sub_dir="ga",
         base_exp_name="LiH_GA_Search"
     )
+    
+    return strategy.run()
 
 if __name__ == "__main__":
     run_ga_search()

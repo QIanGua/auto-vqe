@@ -1,0 +1,25 @@
+{
+    "name": "uccsd",
+    "family": "uccsd",
+    "env_name": "LiH_R_4.0",
+    "n_qubits": 4,
+    "num_params": 22,
+    "config": {
+        "init_state": "hf",
+        "hf_qubits": [
+            0,
+            1
+        ],
+        "layers": 2,
+        "single_qubit_gates": [
+            "ry",
+            "rz"
+        ],
+        "two_qubit_gate": "rzz",
+        "entanglement": "linear",
+        "param_strategy": "independent"
+    },
+    "metadata": {
+        "description": "Toy UCCSD-like ansatz built on top of circuit_factory"
+    }
+}

@@ -14,9 +14,9 @@ import torch
 # 将项目根目录添加到路径中
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.engine import vqe_train, print_results, setup_logger, log_results, generate_report  # type: ignore
-from experiments.lih.env import ENV  # type: ignore
-from baselines.uccsd import build_ansatz as build_uccsd  # type: ignore
+from core.engine import vqe_train, print_results, setup_logger, log_results, generate_report
+from experiments.lih.env import ENV
+from baselines.uccsd import build_ansatz as build_uccsd
 
 
 N_QUBITS = ENV.n_qubits
@@ -49,18 +49,16 @@ def run_baseline(trials: int = 3):
     """
     在固定 Baseline 配置上运行多次 VQE，并记录最优结果。
     """
-    exp_dir = os.path.dirname(__file__)
-    os.makedirs(exp_dir, exist_ok=True)
-
+    from core.engine import prepare_experiment_dir
+    base_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(base_dir, "lih_baseline")
+    
     # 使用 Baseline Zoo 中的 UCCSD 基线构造 ansatz，并持久化其结构化描述。
-    # 通过 BASELINE_CONFIG 覆盖 UCCSD 默认配置，以保持与历史 LiH 基线一致。
     uccsd_spec = build_uccsd(ENV, BASELINE_CONFIG)
     uccsd_spec_dict = uccsd_spec.to_logging_dict()
     save_baseline_config(exp_dir, uccsd_spec_dict)
 
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_path = os.path.join(exp_dir, f"baseline_lih_{timestamp}.log")
-
+    log_path = os.path.join(exp_dir, "experiment.log")
     logger = setup_logger(log_path)
     logger.info("--- LiH Baseline Experiment ---")
     logger.info(f"Baseline family: {uccsd_spec.family}, name: {uccsd_spec.name}")

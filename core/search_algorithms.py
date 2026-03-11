@@ -129,7 +129,10 @@ class GASearchStrategy(SearchStrategy):
             return self.results_cache[key]
 
         if not self.controller.should_continue():
-            return {"val_energy": 999.0, "num_params": 999}
+            return {
+                "results": {"val_energy": 999.0, "num_params": 999},
+                "ansatz_spec": {"name": "skipped"}
+            }
 
         self.logger.info(f"  Evaluating: {key}")
 

@@ -1,0 +1,2 @@
+timestamp	exp_name	val_energy	energy_error	num_params	actual_steps	training_sec	comment
+2026-03-11 13:16:35	LiH_Baseline	-7.749394	0.000000	22	175	3.91	Baseline spec: {'name': 'uccsd', 'family': 'uccsd', 'env_name': 'LiH_R_4.0', 'n_qubits': 4, 'num_params': 22, 'config': {'init_state': 'hf', 'hf_qubits': [0, 1], 'layers': 2, 'single_qubit_gates': ['ry', 'rz'], 'two_qubit_gate': 'rzz', 'entanglement': 'linear', 'param_strategy': 'independent'}, 'metadata': {'description': 'Toy UCCSD-like ansatz built on top of circuit_factory'}}

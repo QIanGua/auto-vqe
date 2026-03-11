@@ -1,0 +1,26 @@
+=== Starting GA Search: AutoSearch_LiH_Phase1_GA ===
+Population: 6, Gen: 2, Elite: 2
+
+--- Generation 1/2 ---
+  Evaluating: layers=4, single_qubit_gates=ry+rz, two_qubit_gate=cnot, entanglement=linear, init_state=hf
+  Evaluating: layers=2, single_qubit_gates=ry, two_qubit_gate=cnot, entanglement=ring, init_state=hf
+  Evaluating: layers=3, single_qubit_gates=ry+rz, two_qubit_gate=rzz, entanglement=ring, init_state=hf
+New Best Overall: Energy=-7.749394, Params=8
+GA search stopped: 
+
+=== GA Search Final Best ===
+
+--- VQE Results ---
+val_energy        : -7.749393939971924
+exact_energy      : -7.749393694524732
+energy_error      : 2.454471914603573e-07
+num_params        : 8
+training_seconds  : 4.21
+actual_steps      : 235
+seed              : 8273
+n_qubits          : 4
+optimizer_spec    : {'optimizer': 'Adam', 'lr': 0.02, 'max_steps': 600, 'early_stop_window': 50, 'early_stop_threshold': 1e-08, 'grad_clip_norm': 1.0, 'scheduler': {'type': 'ReduceLROnPlateau', 'mode': 'min', 'patience': 100, 'factor': 0.5, 'min_lr': 1e-05}}
+-------------------
+
+Best Config: layers=2, single_qubit_gates=ry, two_qubit_gate=cnot, entanglement=ring, init_state=hf
+Best GA config saved to /Users/qianlong/tries/2026-03-10-auto-vqe/experiments/lih/20260311_131050_lih_auto_search/best_config_ga.json

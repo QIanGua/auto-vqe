@@ -19,7 +19,9 @@ from core.circuit_factory import build_ansatz, generate_config_grid
 from experiments.tfim.env import ENV
 
 def run_auto_search():
-    exp_dir = os.path.dirname(__file__)
+    from core.engine import prepare_experiment_dir
+    base_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(base_dir, "tfim_auto_search")
     
     # 共享控制器：共享预算
     controller = SearchController(

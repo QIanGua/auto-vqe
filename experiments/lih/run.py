@@ -113,17 +113,16 @@ def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
 def run_geometry_scan(trials_per_R: int = 1, max_steps: int = 800, lr: float = 0.05):
     """
     对一组 Li–H 键长做完整 bond dissociation curve 扫描。
-
-    只考察“结构可迁移性”：同一个 ansatz 结构（ANSATZ_CONFIG）在不同几何上
-    各自独立优化参数，看在整个曲线上的误差表现。
     """
-    import datetime
+    from core.engine import prepare_experiment_dir
+    base_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(base_dir, "lih_geom_scan")
 
-    exp_dir = os.path.dirname(__file__)
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_path = os.path.join(exp_dir, f"vqe_lih_geom_scan_{timestamp}.log")
-
+    log_path = os.path.join(exp_dir, "experiment.log")
     logger = setup_logger(log_path)
+    logger.info(f"--- LiH Geometry Scan (structure transfer) ---")
+    logger.info(f"Experiment Directory: {exp_dir}")
+    logger.info(f"Ansatz config: {ANSATZ_CONFIG}")
     logger.info(f"--- LiH Geometry Scan (structure transfer) ---")
     logger.info(f"Ansatz config: {ANSATZ_CONFIG}")
 
@@ -211,6 +210,8 @@ def run_geometry_scan(trials_per_R: int = 1, max_steps: int = 800, lr: float = 0
         log_results(exp_dir, f"LiH_Geom_R_{R:.3f}", best_results, comment=comment)
 
     # 额外输出一个 TSV 文件专门用于解离曲线绘制
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     curve_path = os.path.join(exp_dir, f"lih_geometry_curve_{timestamp}.tsv")
     with open(curve_path, "w") as f:
         # 列顺序：

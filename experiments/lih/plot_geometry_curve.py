@@ -106,7 +106,7 @@ def _load_curve(
     return Rs, vqe, exact_active, ansatz_errors, trunc_errors
 
 
-def main(argv: list[str]) -> None:
+def main(argv: list[str], output_dir: str | None = None) -> None:
     here = os.path.dirname(__file__)
 
     if len(argv) > 1:
@@ -115,13 +115,22 @@ def main(argv: list[str]) -> None:
             curve_path = os.path.join(here, curve_path)
     else:
         curve_path = _find_latest_curve_tsv(here)
+        
+    # If not found in 'here', try searching recursively or in subdirs if needed, 
+    # but for now we stick to the logic. 
+    # Actually, if output_dir is provided and curve_path is not found in 'here', 
+    # we might want to check output_dir too.
+    if not curve_path and output_dir:
+        curve_path = _find_latest_curve_tsv(output_dir)
 
     if not curve_path or not os.path.exists(curve_path):
         print("No geometry-curve TSV found.")
-        print("Run `run_geometry_scan()` first to generate a TSV file.")
         return
 
+    # Determine where to save plots
+    save_dir = output_dir if output_dir else os.path.dirname(curve_path)
     print(f"Using curve file: {curve_path}")
+    print(f"Plotting to: {save_dir}")
 
     Rs, vqe, exact_active, ansatz_errors, trunc_errors = _load_curve(curve_path)
 
@@ -160,7 +169,7 @@ def main(argv: list[str]) -> None:
         ax.grid(True, alpha=0.3)
         plt.tight_layout()
 
-        energy_png = os.path.join(here, "lih_geometry_curve_energy_active.png")
+        energy_png = os.path.join(save_dir, "lih_geometry_curve_energy_active.png")
         fig.savefig(energy_png, dpi=200)
         plt.close(fig)
         print(f"Saved energy curve (VQE vs active) to: {energy_png}")
@@ -177,7 +186,7 @@ def main(argv: list[str]) -> None:
     ax.grid(True, which="both", alpha=0.3)
     plt.tight_layout()
 
-    ansatz_png = os.path.join(here, "lih_geometry_curve_ansatz_error.png")
+    ansatz_png = os.path.join(save_dir, "lih_geometry_curve_ansatz_error.png")
     fig.savefig(ansatz_png, dpi=200)
     plt.close(fig)
 
@@ -191,7 +200,7 @@ def main(argv: list[str]) -> None:
     ax.grid(True, which="both", alpha=0.3)
     plt.tight_layout()
 
-    trunc_png = os.path.join(here, "lih_geometry_curve_truncation_error.png")
+    trunc_png = os.path.join(save_dir, "lih_geometry_curve_truncation_error.png")
     fig.savefig(trunc_png, dpi=200)
     plt.close(fig)
 
