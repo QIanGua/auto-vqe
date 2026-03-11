@@ -1,6 +1,7 @@
 import time
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
+from core.schemas import CandidateSpec, EvaluationResult, EvaluationSpec, AnsatzSpec
 
 class SearchController:
     """
@@ -137,6 +138,69 @@ class SearchOrchestrator:
         self.controller.on_strategy_switch = self._handle_strategy_switch
         self.current_strategy_index = 0
         self.skip_current_strategy = False
+        
+        # Phase 3: 候选池管理
+        self.candidate_pool: List[CandidateSpec] = []
+        self.evaluation_queue: List[Tuple[CandidateSpec, EvaluationSpec]] = []
+        self.results_history: List[EvaluationResult] = []
+
+    def submit_candidates(
+        self,
+        candidates: List[CandidateSpec],
+        fidelity: str = "quick",
+    ) -> None:
+        """
+        提交候选结构到待评估队列。
+        """
+        for cand in candidates:
+            self.candidate_pool.append(cand)
+            # 默认带上评估配置
+            eval_spec = EvaluationSpec(fidelity=fidelity, max_steps=30) # type: ignore
+            self.evaluation_queue.append((cand, eval_spec))
+        self.logger.info(f"Submitted {len(candidates)} candidates for {fidelity} evaluation.")
+
+    def promote(
+        self,
+        results: List[EvaluationResult],
+    ) -> List[CandidateSpec]:
+        """
+        根据评估结果选择优秀候选晋级到更高级别评估。
+        """
+        # 简单逻辑：取能量排名前 20% 的晋级
+        if not results:
+            return []
+            
+        valid_results = [r for r in results if r.success and r.val_energy is not None]
+        if not valid_results:
+            return []
+            
+        sorted_results = sorted(valid_results, key=lambda x: x.val_energy)
+        num_promote = max(1, len(sorted_results) // 5)
+        to_promote = sorted_results[:num_promote]
+        
+        promoted_candidates = []
+        for res in to_promote:
+            # 查找原始 CandidateSpec
+            cand = next((c for c in self.candidate_pool if c.candidate_id == res.candidate_id), None)
+            if cand:
+                promoted_candidates.append(cand)
+                
+                # 确定下一保真度
+                next_fidelity = "medium" if res.fidelity == "quick" else "full"
+                from core.engine import promote_candidate
+                next_eval_spec = promote_candidate(res, next_fidelity) # type: ignore
+                self.evaluation_queue.append((cand, next_eval_spec))
+                
+        self.logger.info(f"Promoted {len(promoted_candidates)} candidates.")
+        return promoted_candidates
+
+    def schedule_next_batch(self, batch_size: int = 4) -> List[Tuple[CandidateSpec, EvaluationSpec]]:
+        """
+        获取下一批待执行的评估任务。
+        """
+        batch = self.evaluation_queue[:batch_size]
+        self.evaluation_queue = self.evaluation_queue[batch_size:]
+        return batch
 
     def _handle_strategy_switch(self, controller: SearchController):
         """当控制器触发策略切换信号时调用"""

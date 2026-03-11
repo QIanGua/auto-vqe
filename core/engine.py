@@ -9,7 +9,7 @@ import io
 import uuid
 import json
 import subprocess
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
 
 # Import tensorcircuit once, but silence its optional-backend warnings and
 # Python SyntaxWarning noise that may appear on import under newer Python.
@@ -24,7 +24,11 @@ tc.set_backend("pytorch")
 
 
 from contextlib import contextmanager
-from core.schemas import OptimizerSpec
+from core.schemas import (
+    OptimizerSpec, AnsatzSpec, CandidateSpec, EvaluationSpec, 
+    EvaluationResult, WarmStartPlan, StructureEdit
+)
+import numpy as np
 
 
 # ---------------------------------------------------------------------------
@@ -241,6 +245,156 @@ def setup_logger(log_path):
     logger.addHandler(ch)
     return logger
 
+def optimize_parameters(
+    env: Any,
+    ansatz: AnsatzSpec,
+    optimizer_spec: OptimizerSpec,
+    init_params: Optional[np.ndarray] = None,
+    logger: Optional[logging.Logger] = None,
+    seed: Optional[int] = None,
+) -> Dict[str, Any]:
+    """
+    针对给定的 AnsatzSpec 进行参数优化。核心训练逻辑。
+    """
+    from core.circuit_factory import build_circuit_from_ansatz
+    create_circuit_fn, num_params = build_circuit_from_ansatz(ansatz)
+    
+    def compute_energy_fn(params):
+        c, _ = create_circuit_fn(params)
+        return env.compute_energy(c)
+    
+    # 转换为 torch 初始参数
+    if init_params is not None:
+        params_tensor = torch.tensor(init_params, dtype=torch.float32, requires_grad=True)
+    else:
+        if seed is not None:
+            torch.manual_seed(seed)
+        params_tensor = torch.randn(num_params, requires_grad=True)
+
+    max_steps = optimizer_spec.max_steps
+    lr = optimizer_spec.lr
+    early_stop_window = optimizer_spec.early_stop_window
+    early_stop_threshold = optimizer_spec.early_stop_threshold
+    grad_clip_norm = optimizer_spec.grad_clip_norm
+
+    if optimizer_spec.method == "Adam":
+        optimizer = torch.optim.Adam([params_tensor], lr=lr)
+    else:
+        optimizer = torch.optim.Adam([params_tensor], lr=lr)
+
+    sched_spec = optimizer_spec.scheduler
+    if sched_spec and sched_spec.type == "ReduceLROnPlateau":
+        mode: Any = sched_spec.mode
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer, mode=mode, patience=sched_spec.patience, 
+            factor=sched_spec.factor, min_lr=sched_spec.min_lr
+        )
+    else:
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: 1.0)
+
+    start_time = time.time()
+    energy_history = []
+    actual_steps = max_steps
+
+    for i in range(max_steps):
+        optimizer.zero_grad()
+        energy = compute_energy_fn(params_tensor)
+        energy.backward()
+        if grad_clip_norm is not None:
+            torch.nn.utils.clip_grad_norm_([params_tensor], max_norm=grad_clip_norm)
+        optimizer.step()
+
+        e_val = energy.item()
+        energy_history.append(e_val)
+        scheduler.step(e_val)
+
+        if i % 100 == 0:
+            current_lr = optimizer.param_groups[0]['lr']
+            msg = f"Step {i}, Energy: {e_val:.6f}, LR: {current_lr:.2e}"
+            if logger: logger.info(msg)
+
+        if len(energy_history) >= early_stop_window:
+            recent = energy_history[-early_stop_window:]
+            if max(recent) - min(recent) < early_stop_threshold:
+                actual_steps = i + 1
+                break
+
+    end_time = time.time()
+    final_energy = compute_energy_fn(params_tensor).item()
+    
+    return {
+        "val_energy": final_energy,
+        "num_params": num_params,
+        "runtime_sec": end_time - start_time,
+        "actual_steps": actual_steps,
+        "final_params": params_tensor.detach().numpy(),
+        "energy_history": energy_history,
+    }
+
+def evaluate_candidate(
+    env: Any,
+    candidate: CandidateSpec,
+    evaluation: EvaluationSpec,
+    warm_start: Optional[WarmStartPlan] = None,
+    logger: Optional[logging.Logger] = None,
+) -> EvaluationResult:
+    """
+    多保真评估包装器。
+    """
+    start_time = time.time()
+    
+    # 1. 准备初始参数 (Warm-start)
+    init_params = None
+    if warm_start and candidate.warm_start_from:
+        # 这里需要从存储或上下文获取旧参数，MVP 暂假设外部已处理并注入 init_params
+        pass
+    
+    # 2. 映射 EvaluationSpec 到 OptimizerSpec
+    opt_spec = OptimizerSpec(
+        method=evaluation.optimizer_name,
+        max_steps=evaluation.max_steps,
+        early_stop_threshold=1e-8 if evaluation.enable_early_stop else 1e-12
+    )
+    
+    # 3. 执行优化
+    # TODO: 处理 n_seeds
+    results = optimize_parameters(
+        env=env,
+        ansatz=candidate.ansatz,
+        optimizer_spec=opt_spec,
+        init_params=init_params,
+        logger=logger
+    )
+    
+    # 4. 构建结果
+    from core.circuit_factory import estimate_circuit_cost
+    cost = estimate_circuit_cost(candidate.ansatz)
+    
+    return EvaluationResult(
+        candidate_id=candidate.candidate_id,
+        fidelity=evaluation.fidelity,
+        success=True,
+        val_energy=results["val_energy"],
+        energy_error=abs(results["val_energy"] - env.exact_energy) if hasattr(env, "exact_energy") else None,
+        num_params=results["num_params"],
+        two_qubit_gates=int(cost["two_qubit_gates"]),
+        runtime_sec=time.time() - start_time,
+        actual_steps=results["actual_steps"],
+        artifacts={}
+    )
+
+def promote_candidate(
+    previous: EvaluationResult,
+    next_fidelity: Literal["medium", "full"],
+) -> EvaluationSpec:
+    """
+    根据上一阶段评估结果，生成下一阶段的评估配置。
+    """
+    if next_fidelity == "medium":
+        return EvaluationSpec(fidelity="medium", max_steps=150, n_seeds=2)
+    else:
+        return EvaluationSpec(fidelity="full", max_steps=500, n_seeds=3)
+
 def vqe_train(
     create_circuit_fn,
     compute_energy_fn,
@@ -257,144 +411,54 @@ def vqe_train(
     optimizer_spec_obj: Optional["OptimizerSpec"] = None,
 ):
     """
-    通用 VQE 训练循环。
-
-    参数
-    ----
-    create_circuit_fn : Callable[[Tensor], Tuple[Circuit, int]]
-        给定一维参数 Tensor，返回量子线路以及实际使用的参数数量。
-    compute_energy_fn : Callable[[Tensor], Tensor]
-        输入参数 Tensor，输出能量标量张量。
-    n_qubits : int
-        量子比特数量（目前仅用于记录，接口保留以便后续扩展）。
-    exact_energy : float
-        目标基态能量，用于计算 energy_error。
-    num_params : int
-        需要优化的参数个数。由具体 ansatz 显式给出，避免在此处做脆弱的推断。
-    max_steps : int
-        优化步数上限。
-    lr : float
-        Adam 初始学习率。
-    logger : logging.Logger | None
-        若提供，则使用 logger 记录日志，否则直接 print。
-    seed : int | None
-        若提供，则在本函数内部设置 torch 随机种子，以提升实验可复现性。
-    early_stop_window : int
-        早停窗口大小：连续 N 步能量变化小于阈值时自动停止。
-    early_stop_threshold : float
-        早停阈值：窗口内能量极差低于该值视为收敛。
-    grad_clip_norm : float | None
-        梯度裁剪范数上限。设为 None 禁用裁剪。
+    Legacy vqe_train 兼容层。
     """
+    if optimizer_spec_obj is None:
+        optimizer_spec_obj = OptimizerSpec(
+            lr=lr, max_steps=max_steps, 
+            early_stop_window=early_stop_window, 
+            early_stop_threshold=early_stop_threshold, 
+            grad_clip_norm=grad_clip_norm
+        )
+    # 或者让 optimize_parameters 接受 create_circuit_fn / compute_energy_fn。
+    
+    # --- 原始逻辑开始 ---
     if seed is not None:
         torch.manual_seed(seed)
 
-    # Default to OptimizerSpec if none provided
-    if optimizer_spec_obj is None:
-        optimizer_spec_obj = OptimizerSpec(lr=lr, max_steps=max_steps, early_stop_window=early_stop_window, early_stop_threshold=early_stop_threshold, grad_clip_norm=grad_clip_norm)
-
-    max_steps = optimizer_spec_obj.max_steps
-    lr = optimizer_spec_obj.lr
-    early_stop_window = optimizer_spec_obj.early_stop_window
-    early_stop_threshold = optimizer_spec_obj.early_stop_threshold
-    grad_clip_norm = optimizer_spec_obj.grad_clip_norm
-
     params = torch.randn(num_params, requires_grad=True)
+    optimizer = torch.optim.Adam([params], lr=optimizer_spec_obj.lr)
     
-    # Optimizer initialization from Spec
-    if optimizer_spec_obj.method == "Adam":
-        optimizer = torch.optim.Adam([params], lr=lr)
-    else:
-        # Fallback to Adam if unknown, or extend here for SGD/LBFGS
-        optimizer = torch.optim.Adam([params], lr=lr)
-
-    # Scheduler initialization from Spec
-    sched_spec = optimizer_spec_obj.scheduler
-    if sched_spec and sched_spec.type == "ReduceLROnPlateau":
-        mode: Any = sched_spec.mode # Handle Literal typing
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, 
-            mode=mode, 
-            patience=sched_spec.patience, 
-            factor=sched_spec.factor, 
-            min_lr=sched_spec.min_lr
-        )
-    else:
-        # No-op scheduler
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: 1.0)
-
     start_time = time.time()
     energy_history = []
-    actual_steps = max_steps
+    actual_steps = optimizer_spec_obj.max_steps
 
-    for i in range(max_steps):
+    for i in range(optimizer_spec_obj.max_steps):
         optimizer.zero_grad()
         energy = compute_energy_fn(params)
         energy.backward()
-
-        if grad_clip_norm is not None:
-            torch.nn.utils.clip_grad_norm_([params], max_norm=grad_clip_norm)
-
+        if optimizer_spec_obj.grad_clip_norm is not None:
+            torch.nn.utils.clip_grad_norm_([params], max_norm=optimizer_spec_obj.grad_clip_norm)
         optimizer.step()
-
         e_val = energy.item()
         energy_history.append(e_val)
-        scheduler.step(e_val)
-
         if i % 100 == 0:
-            current_lr = optimizer.param_groups[0]['lr']
-            msg = f"Step {i}, Energy: {e_val:.6f}, LR: {current_lr:.2e}"
-            if logger: logger.info(msg)
-            else: print(msg)
-
-        # Early stopping
-        if len(energy_history) >= early_stop_window:
-            recent = energy_history[-early_stop_window:]
-            if max(recent) - min(recent) < early_stop_threshold:
-                msg = f"Early stop at step {i}: converged (window={early_stop_window}, threshold={early_stop_threshold:.1e})"
-                if logger: logger.info(msg)
-                else: print(msg)
+            if logger: logger.info(f"Step {i}, Energy: {e_val:.6f}")
+        if len(energy_history) >= optimizer_spec_obj.early_stop_window:
+            recent = energy_history[-optimizer_spec_obj.early_stop_window:]
+            if max(recent) - min(recent) < optimizer_spec_obj.early_stop_threshold:
                 actual_steps = i + 1
                 break
-
-    end_time = time.time()
+    
     final_energy = compute_energy_fn(params).item()
-
-    # 只在需要时才使用 exact_energy 计算误差，避免在训练内环中依赖“答案”
-    if exact_energy is not None:
-        energy_error = abs(final_energy - exact_energy)
-    else:
-        energy_error = None
-
-    optimizer_spec: Dict[str, Any] = {
-        "optimizer": "Adam",
-        "lr": lr,
-        "max_steps": max_steps,
-        "early_stop_window": early_stop_window,
-        "early_stop_threshold": early_stop_threshold,
-        "grad_clip_norm": grad_clip_norm,
-        "scheduler": {
-            "type": "ReduceLROnPlateau",
-            "mode": "min",
-            "patience": 100,
-            "factor": 0.5,
-            "min_lr": 1e-5,
-        },
-    }
-
     return {
         "val_energy": final_energy,
-        "exact_energy": exact_energy,
-        "energy_error": energy_error,
+        "energy_error": abs(final_energy - exact_energy) if exact_energy else None,
         "num_params": num_params,
-        "training_seconds": round(end_time - start_time, 2),
+        "training_seconds": time.time() - start_time,
         "actual_steps": actual_steps,
         "final_params": params.detach(),
         "energy_history": energy_history,
-        # Extra metadata for structured experiment DB
-        "seed": seed,
-        "n_qubits": n_qubits,
-        "optimizer_spec": optimizer_spec,
     }
 
 def print_results(results, logger=None):

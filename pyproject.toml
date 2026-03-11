@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 filterwarnings = [
     "ignore::SyntaxWarning",
     "ignore::DeprecationWarning:qiskit.*",

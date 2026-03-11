@@ -42,7 +42,7 @@ baseline-tfim:
 
 # 运行所有单元测试 (Schema, Orchestration, Parameter Mapping)
 test:
-    uv run pytest tests/
+    PYTHONPATH=. uv run pytest tests/
 
 # 运行参数映射基准测试 (Warm-start Verification)
 benchmark:
