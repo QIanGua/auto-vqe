@@ -19,10 +19,10 @@
 - **精度奇迹**: 能量误差直接从初期的显著水平下降到 **2.85 × 10⁻⁶**，成功收敛到极高精度。
 - **極简美学**: 仅用 32 个参数，便完美刻画了 4-qubit 纠缠体系。
 
-![TFIM 收敛曲线](assets/article/tfim_convergence.png)
+![TFIM 收敛曲线](../assets/article/tfim_convergence.png)
 *图 1：TFIM 实验中的高精度收敛轨迹 —— 能量随步数迅速下降，展现了 AI 对量子景观的精准导航。*
 
-![TFIM 线路图](assets/article/tfim_circuit.png)
+![TFIM 线路图](../assets/article/tfim_circuit.png)
 *图 2：AI 自主进化出的最优 Ansatz 架构 —— 简洁、高效、充满逻辑。*
 
 ---
@@ -36,10 +36,10 @@
 - **全覆盖精度**: 在全量程扫描中，Ansatz 与活性空间精确解的误差始终保持在 **10⁻⁷** 级别。
 - **物理洞察**: 成功捕获了平衡键长（1.6 Å）及其在远距离下的解离行为。
 
-![LiH 解离曲线](assets/article/lih_dissociation.png)
+![LiH 解离曲线](../assets/article/lih_dissociation.png)
 *图 3：LiH 分子解离曲线对比 —— 虚线与实线的完美重合，宣告了 AI 设计线路的稳健性。*
 
-![LiH 误差分析](assets/article/lih_error.png)
+![LiH 误差分析](../assets/article/lih_error.png)
 *图 4：全量程误差分布 —— 无论键长如何伸缩，误差始终被压制在“尘埃”之下。*
 
 ---
