@@ -9,7 +9,8 @@ import io
 import uuid
 import json
 import subprocess
-from typing import Any, Dict, Optional, Literal
+import numpy as np
+from typing import Any, Dict, Optional, Literal, Callable
 
 # Import tensorcircuit once, but silence its optional-backend warnings and
 # Python SyntaxWarning noise that may appear on import under newer Python.
@@ -247,21 +248,36 @@ def setup_logger(log_path):
 
 def optimize_parameters(
     env: Any,
-    ansatz: AnsatzSpec,
-    optimizer_spec: OptimizerSpec,
+    ansatz: Optional[AnsatzSpec] = None,
+    optimizer_spec: Optional[OptimizerSpec] = None,
     init_params: Optional[np.ndarray] = None,
     logger: Optional[logging.Logger] = None,
     seed: Optional[int] = None,
+    # 额外参数支持 legacy vqe_train
+    create_circuit_fn: Optional[Callable] = None,
+    compute_energy_fn: Optional[Callable] = None,
+    num_params: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    针对给定的 AnsatzSpec 进行参数优化。核心训练逻辑。
+    针对给定的 AnsatzSpec 或自定义电路工厂进行参数优化。
     """
-    from core.circuit_factory import build_circuit_from_ansatz
-    create_circuit_fn, num_params = build_circuit_from_ansatz(ansatz)
+    if optimizer_spec is None:
+        optimizer_spec = OptimizerSpec()
+
+    if create_circuit_fn is None:
+        if ansatz is None:
+            raise ValueError("Either ansatz or create_circuit_fn must be provided.")
+        from core.circuit_factory import build_circuit_from_ansatz
+        create_circuit_fn, num_params = build_circuit_from_ansatz(ansatz)
     
-    def compute_energy_fn(params):
-        c, _ = create_circuit_fn(params)
-        return env.compute_energy(c)
+    if compute_energy_fn is None:
+        def compute_energy_fn(params):
+            c, _ = create_circuit_fn(params)
+            return env.compute_energy(c)
+    
+    if num_params is None:
+        # 尝试推导或者使用 0
+        num_params = 0
     
     # 转换为 torch 初始参数
     if init_params is not None:
@@ -911,7 +927,7 @@ def generate_report(
 | **能量误差** | {(results.get('energy_error') or 0.0):.8e} |
 | **参数量** | {results['num_params']} |
 | **实际步数** | {actual_steps} |
-| **耗时** | {results['training_seconds']} s |
+| **耗时** | {results.get('training_seconds', results.get('runtime_sec', 'N/A'))} s |
 | **状态** | {accuracy_status} |
 
 ## 二、 收敛曲线

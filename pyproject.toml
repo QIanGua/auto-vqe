@@ -25,3 +25,8 @@ filterwarnings = [
     "ignore::DeprecationWarning:qiskit.*",
     "ignore::RuntimeWarning:numpy.linalg.*",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.0.0",
+]
