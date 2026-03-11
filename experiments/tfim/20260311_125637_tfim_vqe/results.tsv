@@ -1,0 +1,2 @@
+timestamp	exp_name	val_energy	energy_error	num_params	actual_steps	training_sec	comment
+2026-03-11 12:58:27	TFIM_ConfigMode	-4.758773	0.000003	32	1500	20.14	Config: {'layers': 4, 'two_qubit_gate': 'cnot', 'param_strategy': 'independent', 'entanglement': 'linear', 'single_qubit_gates': ['ry', 'rz']}, source=/Users/qianlong/tries/2026-03-10-auto-vqe/experiments/tfim/ga/best_config_ga.json

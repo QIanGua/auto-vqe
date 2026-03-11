@@ -107,6 +107,19 @@ def _get_runtime_env() -> Dict[str, Any]:
     return env
 
 
+def prepare_experiment_dir(base_dir: str, exp_name: str) -> str:
+    """
+    为实验创建一个独立的、带时间戳的文件夹。
+    命名规范: YYYYMMDD_HHMMSS_exp_name
+    """
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    folder_name = f"{timestamp}_{exp_name}"
+    exp_path = os.path.join(base_dir, folder_name)
+    os.makedirs(exp_path, exist_ok=True)
+    return exp_path
+
+
 def _append_experiment_jsonl(exp_dir: str, record: Dict[str, Any]) -> None:
     """
     Append a single structured experiment record into results.jsonl
@@ -348,17 +361,32 @@ def print_results(results, logger=None):
     if logger: logger.info(output)
     else: print(output)
 
-def log_results(exp_dir, exp_name, results, comment=""):
-    log_path = os.path.join(exp_dir, "results.tsv")
-    header = "timestamp\texp_name\tval_energy\tenergy_error\tnum_params\tactual_steps\ttraining_sec\tcomment\n"
-    file_exists = os.path.isfile(log_path)
+def log_results(exp_dir, exp_name, results, comment="", global_dir=None):
+    """
+    记录实验结果。
+    同时在实验目录下记录 results.tsv，如果提供 global_dir，则在全局目录也记录一份。
+    """
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    header = "timestamp\texp_name\tval_energy\tenergy_error\tnum_params\tactual_steps\ttraining_sec\tcomment\n"
     actual_steps = results.get('actual_steps', 'N/A')
+    line = f"{ts}\t{exp_name}\t{results['val_energy']:.6f}\t{results['energy_error']:.6f}\t{results['num_params']}\t{actual_steps}\t{results['training_seconds']}\t{comment}\n"
+
+    # 1. 记录到当前实验目录
+    log_path = os.path.join(exp_dir, "results.tsv")
+    file_exists = os.path.isfile(log_path)
     with open(log_path, "a") as f:
         if not file_exists:
             f.write(header)
-        line = f"{ts}\t{exp_name}\t{results['val_energy']:.6f}\t{results['energy_error']:.6f}\t{results['num_params']}\t{actual_steps}\t{results['training_seconds']}\t{comment}\n"
         f.write(line)
+
+    # 2. 记录到全局汇总目录 (索引) - 可选
+    if global_dir and global_dir != exp_dir:
+        global_path = os.path.join(global_dir, "results.tsv")
+        global_exists = os.path.isfile(global_path)
+        with open(global_path, "a") as f:
+            if not global_exists:
+                f.write(header)
+            f.write(line)
 
 def summarize_config(config):
     """

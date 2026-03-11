@@ -56,13 +56,14 @@ ANSATZ_CONFIG, CONFIG_PATH = load_best_config()
 create_circuit, NUM_PARAMS = build_ansatz(ANSATZ_CONFIG, N_QUBITS)
 
 def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
-    import datetime
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    exp_dir = os.path.dirname(__file__)
-    log_path = os.path.join(exp_dir, f"vqe_lih_{timestamp}.log")
+    from core.engine import prepare_experiment_dir
+    base_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(base_dir, "lih_vqe")
     
+    log_path = os.path.join(exp_dir, "experiment.log")
     logger = setup_logger(log_path)
     logger.info(f"--- LiH Experiment Phase 10 ---")
+    logger.info(f"Experiment Directory: {exp_dir}")
     logger.info(f"Config Source: {CONFIG_PATH}")
     logger.info(f"Config Content: {ANSATZ_CONFIG}")
     logger.info(f"Target Energy: {EXACT_ENERGY:.6f}")
@@ -96,7 +97,8 @@ def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
     logger.info("\n=== Final Autonomous Best ===")
     print_results(best_results, logger=logger)
     
-    log_results(exp_dir, "LiH_Phase10", best_results, comment=f"Config: {ANSATZ_CONFIG}, source={CONFIG_PATH}")
+    # 记录到实验目录，并同步到实验根目录的汇总表
+    log_results(exp_dir, "LiH_Phase10", best_results, comment=f"Config: {ANSATZ_CONFIG}, source={CONFIG_PATH}", global_dir=base_dir)
     report_path = generate_report(
         exp_dir,
         "LiH_Phase10_Report",

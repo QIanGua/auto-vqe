@@ -1,0 +1,107 @@
+--- TFIM Experiment (Atomic/Config Mode) ---
+Experiment Directory: /Users/qianlong/tries/2026-03-10-auto-vqe/experiments/tfim/20260311_125637_tfim_vqe
+Config Source: /Users/qianlong/tries/2026-03-10-auto-vqe/experiments/tfim/ga/best_config_ga.json
+Config Content: {'layers': 4, 'two_qubit_gate': 'cnot', 'param_strategy': 'independent', 'entanglement': 'linear', 'single_qubit_gates': ['ry', 'rz']}
+Total Params: 32
+Target Energy: -4.758770
+
+--- Trial 1/5 ---
+Step 0, Energy: 0.256930, LR: 1.00e-02
+Step 100, Energy: -4.719209, LR: 1.00e-02
+Step 200, Energy: -4.753234, LR: 1.00e-02
+Step 300, Energy: -4.754917, LR: 1.00e-02
+Step 400, Energy: -4.755755, LR: 1.00e-02
+Step 500, Energy: -4.756460, LR: 1.00e-02
+Step 600, Energy: -4.757202, LR: 1.00e-02
+Step 700, Energy: -4.757875, LR: 1.00e-02
+Step 800, Energy: -4.758334, LR: 1.00e-02
+Step 900, Energy: -4.758583, LR: 1.00e-02
+Step 1000, Energy: -4.758701, LR: 1.00e-02
+Step 1100, Energy: -4.758750, LR: 1.00e-02
+Step 1200, Energy: -4.758764, LR: 1.00e-02
+Step 1300, Energy: -4.758769, LR: 1.00e-02
+Step 1400, Energy: -4.758770, LR: 1.00e-02
+
+--- Trial 2/5 ---
+Step 0, Energy: -0.269656, LR: 1.00e-02
+Step 100, Energy: -3.975987, LR: 1.00e-02
+Step 200, Energy: -4.585850, LR: 1.00e-02
+Step 300, Energy: -4.758624, LR: 1.00e-02
+Step 400, Energy: -4.758666, LR: 1.00e-02
+Step 500, Energy: -4.758702, LR: 1.00e-02
+Step 600, Energy: -4.758718, LR: 1.00e-02
+Step 700, Energy: -4.758733, LR: 1.00e-02
+Step 800, Energy: -4.758739, LR: 1.00e-02
+Step 900, Energy: -4.758744, LR: 1.00e-02
+Step 1000, Energy: -4.758751, LR: 1.00e-02
+Step 1100, Energy: -4.758751, LR: 1.00e-02
+Step 1200, Energy: -4.758758, LR: 1.00e-02
+Step 1300, Energy: -4.758763, LR: 1.00e-02
+Step 1400, Energy: -4.758761, LR: 1.00e-02
+
+--- Trial 3/5 ---
+Step 0, Energy: 0.279514, LR: 1.00e-02
+Step 100, Energy: -4.385915, LR: 1.00e-02
+Step 200, Energy: -4.758097, LR: 1.00e-02
+Step 300, Energy: -4.758608, LR: 1.00e-02
+Step 400, Energy: -4.758720, LR: 1.00e-02
+Step 500, Energy: -4.758752, LR: 1.00e-02
+Step 600, Energy: -4.758762, LR: 1.00e-02
+Step 700, Energy: -4.758769, LR: 1.00e-02
+Step 800, Energy: -4.758771, LR: 1.00e-02
+Step 900, Energy: -4.758771, LR: 1.00e-02
+Step 1000, Energy: -4.758772, LR: 1.00e-02
+Step 1100, Energy: -4.758770, LR: 1.00e-02
+Step 1200, Energy: -4.758770, LR: 1.00e-02
+Step 1300, Energy: -4.758770, LR: 1.00e-02
+Step 1400, Energy: -4.758769, LR: 1.00e-02
+
+--- Trial 4/5 ---
+Step 0, Energy: -0.324632, LR: 1.00e-02
+Step 100, Energy: -4.556316, LR: 1.00e-02
+Step 200, Energy: -4.737708, LR: 1.00e-02
+Step 300, Energy: -4.748683, LR: 1.00e-02
+Step 400, Energy: -4.751813, LR: 1.00e-02
+Step 500, Energy: -4.754412, LR: 1.00e-02
+Step 600, Energy: -4.756426, LR: 1.00e-02
+Step 700, Energy: -4.757555, LR: 1.00e-02
+Step 800, Energy: -4.758107, LR: 1.00e-02
+Step 900, Energy: -4.758390, LR: 1.00e-02
+Step 1000, Energy: -4.758549, LR: 1.00e-02
+Step 1100, Energy: -4.758640, LR: 1.00e-02
+Step 1200, Energy: -4.758690, LR: 1.00e-02
+Step 1300, Energy: -4.758728, LR: 1.00e-02
+Step 1400, Energy: -4.758746, LR: 1.00e-02
+
+--- Trial 5/5 ---
+Step 0, Energy: 0.857388, LR: 1.00e-02
+Step 100, Energy: -3.785803, LR: 1.00e-02
+Step 200, Energy: -4.060469, LR: 1.00e-02
+Step 300, Energy: -4.064156, LR: 1.00e-02
+Step 400, Energy: -4.064179, LR: 1.00e-02
+Step 500, Energy: -4.064179, LR: 1.00e-02
+Step 600, Energy: -4.064178, LR: 1.00e-02
+Step 700, Energy: -4.064177, LR: 1.00e-02
+Step 800, Energy: -4.064178, LR: 1.00e-02
+Step 900, Energy: -4.064178, LR: 1.00e-02
+Step 1000, Energy: -4.064178, LR: 1.00e-02
+Step 1100, Energy: -4.064178, LR: 1.00e-02
+Step 1200, Energy: -4.064178, LR: 1.00e-02
+Step 1300, Energy: -4.064179, LR: 1.00e-02
+Step 1400, Energy: -4.064178, LR: 1.00e-02
+
+=== Final Autonomous Best ===
+
+--- VQE Results ---
+val_energy        : -4.758772850036621
+exact_energy      : -4.75877
+energy_error      : 2.8500366209271988e-06
+num_params        : 32
+training_seconds  : 20.14
+actual_steps      : 1500
+seed              : None
+n_qubits          : 4
+optimizer_spec    : {'optimizer': 'Adam', 'lr': 0.01, 'max_steps': 1500, 'early_stop_window': 50, 'early_stop_threshold': 1e-08, 'grad_clip_norm': 1.0, 'scheduler': {'type': 'ReduceLROnPlateau', 'mode': 'min', 'patience': 100, 'factor': 0.5, 'min_lr': 1e-05}}
+-------------------
+
+Report generated at: /Users/qianlong/tries/2026-03-10-auto-vqe/experiments/tfim/20260311_125637_tfim_vqe/report_20260311_125827.md
