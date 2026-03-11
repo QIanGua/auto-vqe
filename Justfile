@@ -4,6 +4,13 @@
 default:
     @just --list
 
+# 安装 git hooks 到本地
+install-hooks:
+    @echo "Installing pre-push hook..."
+    @printf "#!/bin/bash\necho 'Running pre-push tests...'\njust test || { echo 'Tests failed! Push aborted.'; exit 1; }\n" > .git/hooks/pre-push
+    @chmod +x .git/hooks/pre-push
+    @echo "Hooks installed successfully."
+
 # 安装依赖
 setup:
     uv sync
