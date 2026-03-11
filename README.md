@@ -2,7 +2,7 @@
 
 # Agent-VQE (Automatic Variational Quantum Eigensolver)
 
-[中文版](#agent-vqe-自动量子物理学家)
+[中文版](#agent-vqe-自动量子变分求解工程师)
 
 An experiment to let LLMs automatically explore quantum circuit structures (Ansatz) to approximate the ground state energy of quantum systems such as the 1D Transverse Field Ising Model (TFIM) and LiH.
 
@@ -159,7 +159,7 @@ uv run python experiments/tfim/auto_search.py
 
 ---
 
-# Agent-VQE (自动量子变分求解员)
+# Agent-VQE (自动量子变分求解工程师)
 
 [English Version](#agent-vqe-automatic-variational-quantum-eigensolver)
 
