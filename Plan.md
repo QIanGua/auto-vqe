@@ -6,7 +6,8 @@
 6: 
 7: ## Changelog
 8: 
-9: - **2026-03-11**: 完成 Phase 1。统一了 `results.jsonl` 日志规范，对齐了 GA、MultiDim 和 Baseline 的输出格式，增强了 `SearchController` 的监控能力。
+9: - **2026-03-11**: 完成 Phase 2。实现了 `SearchStrategy` 插件化架构与 `SearchOrchestrator` 编排器，支持基于控制信号的自动策略切换。
+- **2026-03-11**: 完成 Phase 1。统一了 `results.jsonl` 日志规范，对齐了 GA、MultiDim 和 Baseline 的输出格式。
 
 ---
 
@@ -43,7 +44,8 @@
   - 输出最优配置并写入标准化 `ansatz_spec`。
 - `core/controller.py`：
   - `SearchController`：核心预算与停止规则（max runs, wall-clock, no-improvement, failures）。
-  - 目前仅有「触发策略切换」占位逻辑，未真正管理多策略。
+  - `SearchOrchestrator`：策略编排器，负责多策略（Strategy Chain）的顺序执行与热切换。
+- `core/strategy_base.py`：定义了 `SearchStrategy` 抽象接口，及其子类 `GASearchStrategy` 和 `GridSearchStrategy`。
 - `experiments/*/run.py`：
   - 已支持从 `ga/best_config_ga.json`、`multidim/best_config_multidim.json` 等加载配置。
   - 与 Baseline/Baseline Zoo 的 `AnsatzSpec` 正在逐步对齐。
@@ -97,35 +99,38 @@
 
 ---
 
-### Phase 2：策略插件化与控制器抽象（中期，架构演进）
+### Phase 2：策略插件化与控制器抽象（2026-03-11, DONE）
 
 目标：从「单策略脚本」演进为「多策略编排器」，允许在一个实验中按预算自动切换策略。
 
 主要工作：
 1. 引入 `SearchStrategy` 抽象
-   - [ ] 在 `core/` 新增 `strategy_base.py`（或直接放在 `search_algorithms.py` 中）：
-     - 定义抽象类 `SearchStrategy`，至少包含：
-       - `run(self) -> dict`：返回 `{"best_results": ..., "best_config": ..., "best_spec": ...}`。
-       - `name` / `metadata` 字段。
-   - [ ] 将 `GAOptimizer` 适配为 `SearchStrategy` 的一个实现。
-   - [ ] 提供一个 `GridSearchStrategy` 封装现有的 `ansatz_search` 调用。
+   - [x] 在 `core/` 新增 `strategy_base.py`：
+     - 定义抽象类 `SearchStrategy`。
+   - [x] 将 `GAOptimizer` 适配为 `GASearchStrategy`。
+   - [x] 提供 `GridSearchStrategy` 封装现有的 `ansatz_search` 调用。
 2. 引入 `SearchOrchestrator`
-   - [ ] 在 `core/controller.py` 或新文件中引入 `SearchOrchestrator`：
-     - 接收一个策略列表（如 `[GA, Grid, BaselineEval]`）和一个共享的 `SearchController`。
-     - 响应 `SearchController` 中「无改进」「失败太多」事件，完成：
-       - 从当前策略切换到下一个策略；
-       - 缩小搜索空间（可由策略内部实现）。
-   - [ ] 支持在一次高层调用中完成「先 GA 粗搜再 MultiDim 精扫」的流程。
+   - [x] 在 `core/controller.py` 引入 `SearchOrchestrator`：
+     - 支持顺序驱动多个搜索策略。
+     - 响应 `SearchController` 中「无改进」信号实现自动跳转。
 3. 更新实验脚本入口
-   - [ ] 把 `experiments/tfim/ga_search.py` 和 `experiments/tfim/multidim/multidim_search.py` 统一迁移到：
-     - `experiments/tfim/auto_search.py`（LiH 同理），由该文件配置 orchestrator。
-   - [ ] Justfile 中保留：
-     - `ga-*` / `multidim-*` 命令作为策略单独运行入口；
-     - `auto-*` 命令作为组合策略入口。
+   - [x] 创建 `experiments/*/auto_search.py` 作为多策略组合入口。
+   - [x] 验证了基于「无改进」信号的 GA -> Grid 自动切换流程。
 
 产出：
-- 一个统一的策略抽象层，后续新增策略只需实现 `SearchStrategy` 接口。
-- 控制器能够驱动策略切换，而不仅仅是打印警告。
+- 一个统一的策略抽象层，支持热插拔。
+- 控制器能够驱动编排器完成策略切换。
+
+---
+
+### Phase 3：面向更大系统的策略设计（进行中）
+
+目标：引入支持高比特（50-100+）扩展的构造性策略（如 ADAPT-VQE）。
+
+主要工作：
+1. 引入局部算符库（Operator Pool）管理。
+2. 实现 `AdaptSearchStrategy` 插件。
+3. 优化参数复用与热启动逻辑。
 
 ---
 

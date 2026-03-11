@@ -338,6 +338,50 @@ def summarize_config(config):
         return ", ".join(parts)
     return str(config)
 
+from core.strategy_base import SearchStrategy
+
+class GridSearchStrategy(SearchStrategy):
+    """
+    网格搜索策略。封装已有的 ansatz_search 函数。
+    """
+    def __init__(
+        self,
+        env,
+        make_create_circuit_fn,
+        config_list,
+        exp_dir,
+        base_exp_name,
+        lr=0.01,
+        trials_per_config=3,
+        max_steps=1000,
+        sub_dir: str | None = None,
+        logger: logging.Logger | None = None,
+        controller: Optional["SearchController"] = None,
+    ):
+        super().__init__(env, controller, logger, name=base_exp_name)
+        self.make_create_circuit_fn = make_create_circuit_fn
+        self.config_list = config_list
+        self.exp_dir = exp_dir
+        self.base_exp_name = base_exp_name
+        self.lr = lr
+        self.trials_per_config = trials_per_config
+        self.max_steps = max_steps
+        self.sub_dir = sub_dir
+
+    def run(self) -> dict:
+        return ansatz_search(
+            env=self.env,
+            make_create_circuit_fn=self.make_create_circuit_fn,
+            config_list=self.config_list,
+            exp_dir=self.exp_dir,
+            base_exp_name=self.base_exp_name,
+            lr=self.lr,
+            trials_per_config=self.trials_per_config,
+            max_steps=self.max_steps,
+            sub_dir=self.sub_dir,
+            logger=self.logger,
+            controller=self.controller,
+        )
 from core.controller import SearchController
 
 def ansatz_search(

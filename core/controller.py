@@ -117,3 +117,69 @@ class SearchController:
     @property
     def elapsed_time(self) -> float:
         return time.time() - self.start_time
+
+class SearchOrchestrator:
+    """
+    策略编排器：管理多个 SearchStrategy 的执行。
+    支持按需切换策略（如 GA -> Grid）。
+    """
+    def __init__(
+        self,
+        strategies: List[Any],
+        controller: Optional[SearchController] = None,
+        logger: Optional[logging.Logger] = None
+    ):
+        self.strategies = strategies
+        self.logger = logger or logging.getLogger("SearchOrchestrator")
+        self.controller = controller or SearchController(logger=self.logger)
+        
+        # 绑定控制器的回调
+        self.controller.on_strategy_switch = self._handle_strategy_switch
+        self.current_strategy_index = 0
+        self.skip_current_strategy = False
+
+    def _handle_strategy_switch(self, controller: SearchController):
+        """当控制器触发策略切换信号时调用"""
+        self.logger.info("Orchestrator received strategy switch signal.")
+        self.skip_current_strategy = True
+
+    def run(self) -> List[Dict[str, Any]]:
+        """按顺序运行所有策略"""
+        all_results = []
+        
+        for i, strategy in enumerate(self.strategies):
+            self.current_strategy_index = i
+            self.skip_current_strategy = False
+            
+            if not self.controller.should_continue():
+                self.logger.info("Orchestrator stopped: Global budget reached.")
+                break
+                
+            self.logger.info(f"\n>>>> Starting Strategy {i+1}/{len(self.strategies)}: {strategy.name} <<<<")
+            
+            # 确保策略使用同一个控制器以共享预算
+            strategy.controller = self.controller
+            
+            # 为了支持 skip 逻辑，我们需要一个包装或在策略内部检查
+            # 这里简单处理：如果触发了 skip，策略内部的 should_continue 会返回 False (逻辑需对齐)
+            
+            # 临时注入针对该策略的 skip 检查
+            original_should_continue = self.controller.should_continue
+            def orchestrator_should_continue():
+                if self.skip_current_strategy:
+                    self.logger.warning(f"Skipping strategy {strategy.name} due to orchestrator signal.")
+                    return False
+                return original_should_continue()
+            
+            self.controller.should_continue = orchestrator_should_continue
+            
+            try:
+                result = strategy.run()
+                all_results.append(result)
+            finally:
+                # 恢复控制器的原始方法
+                self.controller.should_continue = original_should_continue
+                
+            self.logger.info(f">>>> Strategy {strategy.name} finished. <<<<")
+            
+        return all_results

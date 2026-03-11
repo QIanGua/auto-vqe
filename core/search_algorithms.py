@@ -30,6 +30,7 @@ from core.circuit_factory import (
 )
 
 from core.controller import SearchController
+from core.strategy_base import SearchStrategy
 
 
 def _make_ansatz_spec_dict_for_ga(
@@ -60,11 +61,12 @@ def _make_ansatz_spec_dict_for_ga(
     }
 
 
-class GAOptimizer:
+class GASearchStrategy(SearchStrategy):
     def __init__(
         self,
         env,
         make_circuit_fn: Callable,
+        dimensions: dict,  # 将 dimensions 移动到初始化，符合策略对象化
         pop_size: int = 10,
         generations: int = 5,
         mutation_rate: float = 0.3,
@@ -78,8 +80,9 @@ class GAOptimizer:
         logger: logging.Logger | None = None,
         controller: Optional[SearchController] = None,
     ):
-        self.env = env
+        super().__init__(env, controller, logger, name=base_exp_name)
         self.make_circuit_fn = make_circuit_fn # build_ansatz wrapping
+        self.dimensions = dimensions
         self.pop_size = pop_size
         self.generations = generations
         self.mutation_rate = mutation_rate
@@ -206,12 +209,18 @@ class GAOptimizer:
         self.results_cache[key] = wrapped
         return wrapped
 
-    def run(self, dimensions: dict) -> dict:
+    def run(self, dimensions: Optional[dict] = None) -> dict:
+        if dimensions is not None:
+            self.dimensions = dimensions
+        
+        if self.dimensions is None:
+            raise ValueError("Dimensions must be provided to run GASearchStrategy.")
+
         self.logger.info(f"=== Starting GA Search: {self.base_exp_name} ===")
         self.logger.info(f"Population: {self.pop_size}, Gen: {self.generations}, Elite: {self.elite_count}")
 
         # 1. Initialize Population
-        self.population = [get_random_config(dimensions) for _ in range(self.pop_size)]
+        self.population = [get_random_config(self.dimensions) for _ in range(self.pop_size)]
 
         for gen in range(self.generations):
             if not self.controller.should_continue():
@@ -253,7 +262,7 @@ class GAOptimizer:
                     child = crossover_configs(parent1, parent2)
                 else: # Mutation
                     parent = random.choice(scored_pop[:max(3, self.pop_size//2)])[0]
-                    child = mutate_config(parent, dimensions, mutation_rate=self.mutation_rate)
+                    child = mutate_config(parent, self.dimensions, mutation_rate=self.mutation_rate)
                 
                 new_population.append(child)
             
@@ -292,6 +301,9 @@ class GAOptimizer:
             "ansatz_spec": self.best_spec,
         }
 
+# Backward compatibility
+GAOptimizer = GASearchStrategy
+
 def ga_search(env, make_circuit_fn, dimensions, sub_dir: str | None = None, **kwargs):
-    optimizer = GAOptimizer(env, make_circuit_fn, sub_dir=sub_dir, **kwargs)
-    return optimizer.run(dimensions)
+    optimizer = GASearchStrategy(env, make_circuit_fn, dimensions, sub_dir=sub_dir, **kwargs)
+    return optimizer.run()
