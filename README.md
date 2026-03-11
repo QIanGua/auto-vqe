@@ -216,4 +216,8 @@ uv run python experiments/lih/ga_search.py
 
 用于对特定维度进行穷举分析。通过该策略发现的高效极简配置（遵循奥卡姆剃刀原则）会保存为 **`multidim/best_config_multidim.json`**，详细分析见对应的子文件夹。
 
-**注意**：`run.py` 执行时会自动按照优先级加载配置：`ga/` > `multidim/` > 根目录配置。
+**Note**: `run.py` will automatically prioritize loading configurations in this order: `ga/` > `multidim/` > root directory config.
+
+## Acknowledgements
+
+- Inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch).
