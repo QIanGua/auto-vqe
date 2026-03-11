@@ -1,4 +1,4 @@
-![Auto-VQE Toriyama Edition](assets/article/toriyama_variation_4.png)
+![Auto-VQE Toriyama Edition](../assets/article/toriyama_variation_4.png)
 
 # 量子物理的“自动驾驶”：Auto-VQE 如何重塑量子化学模拟
 
