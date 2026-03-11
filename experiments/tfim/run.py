@@ -31,7 +31,7 @@ def load_best_config():
             with open(path, "r") as f:
                 config = json.load(f)
             print(f"Loaded config from {path}")
-            return config
+            return config, path
             
     # Fallback default config
     return {
@@ -39,9 +39,9 @@ def load_best_config():
         "single_qubit_gates": ["ry"],
         "two_qubit_gate": "rzz",
         "entanglement": "brick"
-    }
+    }, "fallback_default"
 
-ANSATZ_CONFIG = load_best_config()
+ANSATZ_CONFIG, CONFIG_PATH = load_best_config()
 
 create_circuit, NUM_PARAMS = build_ansatz(ANSATZ_CONFIG, N_QUBITS)
 
@@ -53,7 +53,8 @@ def run_experiment(trials=5):
     
     logger = setup_logger(log_path)
     logger.info(f"--- TFIM Experiment (Atomic/Config Mode) ---")
-    logger.info(f"Config: {ANSATZ_CONFIG}")
+    logger.info(f"Config Source: {CONFIG_PATH}")
+    logger.info(f"Config Content: {ANSATZ_CONFIG}")
     logger.info(f"Total Params: {NUM_PARAMS}")
     logger.info(f"Target Energy: {EXACT_ENERGY:.6f}")
     
@@ -86,13 +87,14 @@ def run_experiment(trials=5):
     logger.info("\n=== Final Autonomous Best ===")
     print_results(best_results, logger=logger)
     
-    log_results(exp_dir, "TFIM_ConfigMode", best_results, comment=f"Config: {ANSATZ_CONFIG}, params={NUM_PARAMS}")
+    log_results(exp_dir, "TFIM_ConfigMode", best_results, comment=f"Config: {ANSATZ_CONFIG}, source={CONFIG_PATH}")
     report_path = generate_report(
         exp_dir,
         "TFIM_Phase10_Report",
         best_results,
         create_circuit,
         ansatz_spec=ANSATZ_CONFIG,
+        config_path=CONFIG_PATH,
     )
     logger.info(f"Report generated at: {report_path}")
 

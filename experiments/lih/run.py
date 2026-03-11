@@ -39,7 +39,7 @@ def load_best_config():
             with open(path, "r") as f:
                 config = json.load(f)
             print(f"Loaded config from {path}")
-            return config
+            return config, path
             
     # Fallback default config
     return {
@@ -49,9 +49,9 @@ def load_best_config():
         "single_qubit_gates": ["ry", "rz"],
         "two_qubit_gate": "rzz",
         "entanglement": "linear"
-    }
+    }, "fallback_default"
 
-ANSATZ_CONFIG = load_best_config()
+ANSATZ_CONFIG, CONFIG_PATH = load_best_config()
 
 create_circuit, NUM_PARAMS = build_ansatz(ANSATZ_CONFIG, N_QUBITS)
 
@@ -63,6 +63,8 @@ def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
     
     logger = setup_logger(log_path)
     logger.info(f"--- LiH Experiment Phase 10 ---")
+    logger.info(f"Config Source: {CONFIG_PATH}")
+    logger.info(f"Config Content: {ANSATZ_CONFIG}")
     logger.info(f"Target Energy: {EXACT_ENERGY:.6f}")
     
     best_results = None
@@ -94,13 +96,14 @@ def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
     logger.info("\n=== Final Autonomous Best ===")
     print_results(best_results, logger=logger)
     
-    log_results(exp_dir, "LiH_Phase10", best_results, comment="Robust logging & visualization verification")
+    log_results(exp_dir, "LiH_Phase10", best_results, comment=f"Config: {ANSATZ_CONFIG}, source={CONFIG_PATH}")
     report_path = generate_report(
         exp_dir,
         "LiH_Phase10_Report",
         best_results,
         create_circuit,
         ansatz_spec=ANSATZ_CONFIG,
+        config_path=CONFIG_PATH,
     )
     logger.info(f"Report generated at: {report_path}")
 

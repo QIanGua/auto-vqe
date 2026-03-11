@@ -57,23 +57,54 @@ def _find_git_root(start_dir: str) -> Optional[str]:
         cur = parent
 
 
-def _get_git_diff(repo_root: Optional[str]) -> Optional[str]:
+def _get_git_info(repo_root: Optional[str]) -> Dict[str, Any]:
     """
-    Capture the current uncommitted patch diff for lineage analysis.
-    If repo_root is None or git is unavailable, return None.
+    Capture git commit SHA and dirty status/diff.
     """
+    info: Dict[str, Any] = {"commit": None, "dirty": False, "diff_hash": None, "diff": None}
     if repo_root is None:
-        return None
+        return info
     try:
+        # Get current commit SHA
+        sha = subprocess.check_output(
+            ["git", "-C", repo_root, "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+        ).decode("utf-8").strip()
+        info["commit"] = sha
+
+        # Get diff
         out = subprocess.check_output(
             ["git", "-C", repo_root, "diff"],
             stderr=subprocess.DEVNULL,
         )
         diff_text = out.decode("utf-8", errors="replace")
-        # Normalize empty diff to empty string instead of huge whitespace.
-        return diff_text if diff_text.strip() else ""
+        if diff_text.strip():
+            info["dirty"] = True
+            info["diff"] = diff_text
+            # Store a short hash of the diff to avoid massive redundancy in some analyses
+            import hashlib
+            info["diff_hash"] = hashlib.md5(diff_text.encode()).hexdigest()
+        else:
+            info["diff"] = ""
     except Exception:
-        return None
+        pass
+    return info
+
+
+def _get_runtime_env() -> Dict[str, Any]:
+    """
+    Capture Python and library versions.
+    """
+    import platform
+    env = {
+        "python_version": platform.python_version(),
+        "os": platform.system(),
+        "libraries": {
+            "tensorcircuit": tc.__version__ if hasattr(tc, "__version__") else "unknown",
+            "torch": torch.__version__,
+        }
+    }
+    return env
 
 
 def _append_experiment_jsonl(exp_dir: str, record: Dict[str, Any]) -> None:
@@ -604,6 +635,7 @@ def generate_report(
     decision: str = "keep",
     parent_experiment: Optional[str] = None,
     change_summary: str = "",
+    config_path: Optional[str] = None,
 ):
     """
     自动生成实验报告：Markdown 分析 + 线路图像可视化
@@ -703,12 +735,19 @@ def generate_report(
         # JSON 导出失败不会影响报告生成
         pass
 
+    # 2.5 获取审计信息
+    system = _infer_system_from_exp_dir(exp_dir)
+    git_root = _find_git_root(exp_dir)
+    git_info = _get_git_info(git_root)
+    runtime_env = _get_runtime_env()
+
     # 3. 生成报告文本
     accuracy_status = "探索中"
-    if results['energy_error'] < 0.0016:
-        accuracy_status = "成功 (达到化学精度)"
-    if results['energy_error'] < 1e-5:
-        accuracy_status = "完美收敛 (高精度)"
+    if results.get('energy_error') is not None:
+        if results['energy_error'] < 0.0016:
+            accuracy_status = "成功 (达到化学精度)"
+        if results['energy_error'] < 1e-5:
+            accuracy_status = "完美收敛 (高精度)"
 
     img_embed = f"![Circuit Diagram]({circuit_img_name})\n" if has_image else "*线路图生成暂不可用，请查看 JSON 结构数据。*\n"
 
@@ -723,8 +762,8 @@ def generate_report(
 | 指标 | 数值 |
 | :--- | :--- |
 | **最终能量** | {results['val_energy']:.8f} |
-| **精确能量** | {results['exact_energy']:.8f} |
-| **能量误差** | {results['energy_error']:.8e} |
+| **精确能量** | {results.get('exact_energy') or 0.0:.8f} |
+| **能量误差** | {(results.get('energy_error') or 0.0):.8e} |
 | **参数量** | {results['num_params']} |
 | **实际步数** | {actual_steps} |
 | **耗时** | {results['training_seconds']} s |
@@ -739,7 +778,12 @@ def generate_report(
 {comment if comment else "自动生成的分析报告：实验已完成，收敛曲线正常。"}
 
 ### 精度评价
-{'当前结果已进入化学精度范围。' if results['energy_error'] < 0.0016 else '当前结果尚未达到化学精度，建议压榨参数或增加深度。'}
+{'当前结果已进入化学精度范围。' if (results.get('energy_error') or 1.0) < 0.0016 else '当前结果尚未达到化学精度，建议压榨参数或增加深度。'}
+
+## 五、 审计信息
+- **配置路径**: `{config_path or "N/A"}`
+- **代码版本**: `{(git_info.get("commit") or "unknown")[:8] if git_info.get("commit") else "unknown"}`
+- **环境指纹**: `Python {runtime_env.get("python_version", "N/A")}`
 
 ---
 *完整实验数据（包括线路 JSON 与图像）已保存至目录下。*
@@ -749,9 +793,6 @@ def generate_report(
 
     # 4. 追加结构化实验记录到 results.jsonl
     try:
-        system = _infer_system_from_exp_dir(exp_dir)
-        git_root = _find_git_root(exp_dir)
-        git_diff = _get_git_diff(git_root)
 
         metrics: Dict[str, Any] = {
             "val_energy": results.get("val_energy"),
@@ -774,6 +815,7 @@ def generate_report(
         }
 
         experiment_record: Dict[str, Any] = {
+            "schema_version": "1.1",
             "experiment_id": str(uuid.uuid4()),
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "system": system,
@@ -792,13 +834,21 @@ def generate_report(
             "parent_experiment": parent_experiment,
             "change_summary": change_summary,
             "comment": comment,
-            "git_diff": git_diff,
+            "config_path_used": config_path,
+            "git_info": {
+                "commit": git_info["commit"],
+                "dirty": git_info["dirty"],
+                "diff_hash": git_info["diff_hash"],
+            },
+            "git_diff": git_info["diff"],
+            "runtime_env": runtime_env,
             "artifact_paths": artifact_paths,
         }
 
         _append_experiment_jsonl(exp_dir, experiment_record)
-    except Exception:
+    except Exception as e:
         # 结构化记录永远不应阻塞正常报告生成流程
+        print(f"Failed to log structured experiment: {e}")
         pass
 
     return report_path
