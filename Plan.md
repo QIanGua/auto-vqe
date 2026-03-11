@@ -6,6 +6,7 @@
 
 ## Changelog
 
+- **2026-03-11**: 完成 Phase 3 中的规范化与审计增强。制定了 `evaluation_protocol.md` 与 `config_schema.md`，日志升级至 `schema 1.1` 并支持环境指纹与 Git 追踪。
 - **2026-03-11**: 完成 Phase 2。实现了 `SearchStrategy` 插件化架构与 `SearchOrchestrator` 编排器，支持基于控制信号的自动策略切换。
 - **2026-03-11**: 完成 Phase 1。统一了 `results.jsonl` 日志规范，对齐了 GA、MultiDim 和 Baseline 的输出格式。
 
@@ -114,18 +115,21 @@
 目标：从“功能扩张”转向“规范化与稳健性”，引入支持高比特扩展的构造性协议与映射机制。
 
 主要工作：
-1. **评估协议与局部优化器抽象 (P0)**
-   - [ ] 制定 `doc/evaluation_protocol.md`，统一预算、种子、早停与排名指标。
-   - [ ] 在 `core/engine.py` 中为 `vqe_train` 提供通用的优化器接口，支持 Adam/SPSA 等热切。
-2. **Warm-start 与参数映射协议 (P1)**
+1. **评估协议与配置规范 (P0, DONE)**
+   - [x] 制定 `doc/evaluation_protocol.md`，统一预算、种子、早停与排名指标。
+   - [x] 制定 `doc/config_schema.md`，定义 Typed Config 结构。
+2. **审计增强 (P0, DONE)**
+   - [x] 日志 `results.jsonl` 加入 `schema_version: 1.1` 与环境指纹（Python, OS, 库版本）。
+   - [x] 增强 Git 追踪（Commit SHA, Dirty status, Diff Hash）。
+   - [x] 实验脚本 `run.py` 显式记录 `config_path_used`。
+3. **参数映射协议与 Warm-start (P1)**
    - [ ] 定义显式的参数映射规则（结构编辑前后参数如何投影与继承）。
    - [ ] 优化热启动逻辑，加速大比特线路收敛。
-3. **ADAPT-VQE / 贪心构造原型 (P1)**
+4. **ADAPT-VQE / 贪心构造原型 (P1)**
    - [ ] 在 `core/` 新增 `adapt_vqe.py` 并封装为 `AdaptVQEStrategy` 插件。
    - [ ] 在 4-qubit 体系中基于统一协议对比 ADAPT vs GA 的收敛效率。
-4. **审计增强 (P1)**
-   - [ ] 日志 `results.jsonl` 加入 `schema_version` 与环境指纹（commit, version等）。
-   - [ ] 优化 `git_diff` 记录，避免日志文件过大。
+5. **局部优化器抽象 (P1)**
+   - [ ] 在 `core/engine.py` 中为 `vqe_train` 提供通用的优化器接口，支持 Adam/SPSA 等热切。
 
 产出：
 - 统一的评估协议文档与优化器抽象接口。
@@ -152,11 +156,9 @@
 - [x] Phase 2: 抽象 `SearchStrategy` & 引入 `SearchOrchestrator` & 策略热切换
 
 ### 当前重点 (Current Priority)
-1. **(P0) 制定评估协议** (`doc/evaluation_protocol.md`)：定义预算、种子数、排名指标。
-2. **(P0) 日志规范升级**：加入版本号、环境指纹、显式 Config 路径记录。
+1. **(P1) 参数映射协议**：规范 Warm-start 的参数继承行为。
+2. **(P1) ADAPT-VQE 实现**：基于新协议实现插件。
 3. **(P1) 局部优化器抽象**：支持动态配置 Adam/SPSA。
-4. **(P1) 参数映射协议**：规范 Warm-start 的参数继承行为。
-5. **(P1) ADAPT-VQE 实现**：基于新协议实现插件。
 
 ---
 
@@ -164,8 +166,9 @@
 
 - M1 (DONE)：GA / MultiDim / Baseline 生成统一格式 JSONL（2026-03-11）。
 - M2 (DONE)：`SearchOrchestrator` 自动完成策略切换示例（2026-03-11）。
-- M3：**协议固化**。完成评估协议制定与日志版本化升级。
-- M4：**构造验证**。ADAPT-VQE 在 4-qubit 系统上完成公平对比验证。
+- M3 (DONE)：**协议固化**。完成评估协议制定与日志版本化升级（2026-03-11）。
+- M4：**参数映射**。完成参数映射协议定义。
+- M5：**构造验证**。ADAPT-VQE 在 4-qubit 系统上完成公平对比验证。
 - M5：**外推论证**。完成高比特（50-100+）场景下的架构约束与方案论证。
 
 本 Plan 将随代码演进而更新。
