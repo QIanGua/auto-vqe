@@ -87,13 +87,27 @@ def test_audit_logging():
                 print(f"  [FAIL] Field '{field}' MISSING!")
                 
         # Specific sub-field checks
-        if record.get("schema_version") == "1.1":
-            print("  [PASS] Schema version is 1.1")
+        if record.get("schema_version") == "1.2":
+            print("  [PASS] Schema version is 1.2")
         else:
-            print(f"  [FAIL] schema_version is {record.get('schema_version')}")
+            print(f"  [FAIL] schema_version is {record.get('schema_version')} (expected 1.2)")
             
-        if "commit" in record.get("git_info", {}):
+        git_info = record.get("git_info", {})
+        if "commit" in git_info:
             print("  [PASS] Git commit capture works.")
+            
+        if "diff_path" in git_info:
+            print(f"  [PASS] Git diff optimized to file: {git_info['diff_path']}")
+            full_patch_path = os.path.join(test_dir, git_info['diff_path'])
+            if os.path.exists(full_patch_path):
+                print(f"  [PASS] Patch file exists at {full_patch_path}")
+            else:
+                print(f"  [FAIL] Patch file MISSING at {full_patch_path}")
+        
+        if "diff" in git_info and git_info["diff"]:
+            print("  [FAIL] Full 'diff' text STILL in JSONL!")
+        else:
+            print("  [PASS] Full 'diff' text removed from JSONL.")
             
         if "python_version" in record.get("runtime_env", {}):
             print("  [PASS] Runtime env capture works.")

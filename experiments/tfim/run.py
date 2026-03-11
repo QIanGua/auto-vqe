@@ -12,9 +12,22 @@ from experiments.tfim.env import ENV
 N_QUBITS = ENV.n_qubits
 EXACT_ENERGY = ENV.exact_energy
 
-# ---- 配置加载逻辑 (优先级: GA > MultiDim > Fallback) ----
-def load_best_config():
+import argparse
+import json
+
+# ---- 配置加载逻辑 (优先级: CLI > GA > MultiDim > Fallback) ----
+def load_best_config(explicit_path=None):
     exp_dir = os.path.dirname(__file__)
+    
+    if explicit_path:
+        if os.path.exists(explicit_path):
+            with open(explicit_path, "r") as f:
+                config = json.load(f)
+            print(f"Loaded EXPLICIT config from {explicit_path}")
+            return config, explicit_path
+        else:
+            print(f"Warning: Explicit config path {explicit_path} not found. Falling back.")
+
     # 按照优先级尝试加载不同策略产出的最优配置
     configs_to_try = [
         "ga/best_config_ga.json", 
@@ -27,10 +40,9 @@ def load_best_config():
     for filename in configs_to_try:
         path = os.path.join(exp_dir, filename)
         if os.path.exists(path):
-            import json
             with open(path, "r") as f:
                 config = json.load(f)
-            print(f"Loaded config from {path}")
+            print(f"Loaded auto-discovered config from {path}")
             return config, path
             
     # Fallback default config
@@ -41,12 +53,13 @@ def load_best_config():
         "entanglement": "brick"
     }, "fallback_default"
 
-ANSATZ_CONFIG, CONFIG_PATH = load_best_config()
-
-create_circuit, NUM_PARAMS = build_ansatz(ANSATZ_CONFIG, N_QUBITS)
-
-def run_experiment(trials=5):
+def run_experiment(trials=5, explicit_config_path=None):
     from core.engine import prepare_experiment_dir
+    
+    # Load config inside run_experiment to support CLI override
+    ansatz_config, config_path = load_best_config(explicit_config_path)
+    create_circuit, num_params = build_ansatz(ansatz_config, N_QUBITS)
+    
     base_dir = os.path.dirname(__file__)
     exp_dir = prepare_experiment_dir(base_dir, "tfim_vqe")
     
@@ -54,9 +67,9 @@ def run_experiment(trials=5):
     logger = setup_logger(log_path)
     logger.info(f"--- TFIM Experiment (Atomic/Config Mode) ---")
     logger.info(f"Experiment Directory: {exp_dir}")
-    logger.info(f"Config Source: {CONFIG_PATH}")
-    logger.info(f"Config Content: {ANSATZ_CONFIG}")
-    logger.info(f"Total Params: {NUM_PARAMS}")
+    logger.info(f"Config Source: {config_path}")
+    logger.info(f"Config Content: {ansatz_config}")
+    logger.info(f"Total Params: {num_params}")
     logger.info(f"Target Energy: {EXACT_ENERGY:.6f}")
     
     best_results = None
@@ -75,7 +88,7 @@ def run_experiment(trials=5):
             compute_energy_fn=compute_energy_fn,
             n_qubits=N_QUBITS,
             exact_energy=EXACT_ENERGY,
-            num_params=NUM_PARAMS,
+            num_params=num_params,
             max_steps=1500,
             lr=0.01,
             logger=logger
@@ -89,16 +102,21 @@ def run_experiment(trials=5):
     print_results(best_results, logger=logger)
     
     # 记录到实验目录，并同步到实验根目录的汇总表
-    log_results(exp_dir, "TFIM_ConfigMode", best_results, comment=f"Config: {ANSATZ_CONFIG}, source={CONFIG_PATH}", global_dir=base_dir)
+    log_results(exp_dir, "TFIM_ConfigMode", best_results, comment=f"Config: {ansatz_config}, source={config_path}", global_dir=base_dir)
     report_path = generate_report(
         exp_dir,
         "TFIM_Phase10_Report",
         best_results,
         create_circuit,
-        ansatz_spec=ANSATZ_CONFIG,
-        config_path=CONFIG_PATH,
+        ansatz_spec=ansatz_config,
+        config_path=config_path,
     )
     logger.info(f"Report generated at: {report_path}")
 
 if __name__ == "__main__":
-    run_experiment()
+    parser = argparse.ArgumentParser(description="Run TFIM VQE experiment with config.")
+    parser.add_argument("--config", type=str, help="Path to explicit ansatz config JSON.")
+    parser.add_argument("--trials", type=int, default=5, help="Number of trials with different seeds.")
+    args = parser.parse_args()
+    
+    run_experiment(trials=args.trials, explicit_config_path=args.config)

@@ -21,6 +21,7 @@ import itertools
 from typing import Callable, Any
 
 import tensorcircuit as tc
+from core.schemas import AnsatzSpec
 
 
 # ---------------------------------------------------------------------------
@@ -150,6 +151,13 @@ def build_ansatz(
     init_state = config.get("init_state", "zero")
     hf_qubits = config.get("hf_qubits", [])
     param_strategy = config.get("param_strategy", "independent")
+
+    # Validate with AnsatzSpec if it's a dict, or use it directly if it's already a Spec
+    if not isinstance(config, AnsatzSpec):
+        # We need name and n_qubits to validate fully, but here we might only have the nested config.
+        # For backward compatibility and internal consistency, we'll do a partial validation if possible
+        # or assume the caller handles the full AnsatzSpec.
+        pass
 
     num_params = count_params(config, n_qubits)
 

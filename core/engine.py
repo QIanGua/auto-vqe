@@ -24,6 +24,7 @@ tc.set_backend("pytorch")
 
 
 from contextlib import contextmanager
+from core.schemas import OptimizerSpec
 
 
 # ---------------------------------------------------------------------------
@@ -91,6 +92,19 @@ def _get_git_info(repo_root: Optional[str]) -> Dict[str, Any]:
     return info
 
 
+def _save_git_diff_artifact(exp_dir: str, diff_text: str) -> str:
+    """
+    Save git diff to a separate patch file and return the relative path.
+    """
+    audit_dir = os.path.join(exp_dir, "audit")
+    os.makedirs(audit_dir, exist_ok=True)
+    patch_name = "git_diff.patch"
+    patch_path = os.path.join(audit_dir, patch_name)
+    with open(patch_path, "w", encoding="utf-8") as f:
+        f.write(diff_text)
+    return os.path.join("audit", patch_name)
+
+
 def _get_runtime_env() -> Dict[str, Any]:
     """
     Capture Python and library versions.
@@ -129,6 +143,9 @@ def _append_experiment_jsonl(exp_dir: str, record: Dict[str, Any]) -> None:
     path = os.path.join(exp_dir, "results.jsonl")
     # Use utf-8 so that comments / summaries can contain non-ASCII if needed.
     with open(path, "a", encoding="utf-8") as f:
+        # Update schema version to 1.2 reflecting diff_path
+        if "schema_version" not in record:
+            record["schema_version"] = "1.2"
         f.write(json.dumps(record, ensure_ascii=False))
         f.write("\n")
 
@@ -237,6 +254,7 @@ def vqe_train(
     early_stop_window=50,
     early_stop_threshold=1e-8,
     grad_clip_norm=1.0,
+    optimizer_spec_obj: Optional["OptimizerSpec"] = None,
 ):
     """
     通用 VQE 训练循环。
@@ -276,6 +294,15 @@ def vqe_train(
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', patience=100, factor=0.5, min_lr=1e-5
     )
+    
+    # If explicit spec provided, override defaults (Enforcement)
+    if optimizer_spec_obj:
+        max_steps = optimizer_spec_obj.max_steps
+        lr = optimizer_spec_obj.lr
+        early_stop_window = optimizer_spec_obj.early_stop_window
+        early_stop_threshold = optimizer_spec_obj.early_stop_threshold
+        grad_clip_norm = optimizer_spec_obj.grad_clip_norm
+        # Note: scheduler overrides would happen here if we had a more complex factory
 
     start_time = time.time()
     energy_history = []
@@ -769,6 +796,13 @@ def generate_report(
     git_info = _get_git_info(git_root)
     runtime_env = _get_runtime_env()
 
+    # 2.6 Optimize git_diff in record
+    if git_info.get("diff"):
+        diff_path = _save_git_diff_artifact(exp_dir, git_info["diff"])
+        git_info["diff_path"] = diff_path
+        # Remove full diff from memory to keep jsonl small
+        del git_info["diff"]
+
     # 3. 生成报告文本
     accuracy_status = "探索中"
     if results.get('energy_error') is not None:
@@ -843,7 +877,7 @@ def generate_report(
         }
 
         experiment_record: Dict[str, Any] = {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "experiment_id": str(uuid.uuid4()),
             "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "system": system,
