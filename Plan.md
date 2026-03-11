@@ -3,6 +3,10 @@
 > 版本：2026-03-11  
 > 目标读者：项目维护者 & 贡献者  
 > 目标：把 Auto-VQE 从「4-qubit demo」演进为「可扩展、可插拔、可评估」的自动 Ansatz 搜索框架，并为几十到上百比特的后续实验打基础。
+6: 
+7: ## Changelog
+8: 
+9: - **2026-03-11**: 完成 Phase 1。统一了 `results.jsonl` 日志规范，对齐了 GA、MultiDim 和 Baseline 的输出格式，增强了 `SearchController` 的监控能力。
 
 ---
 
@@ -76,19 +80,19 @@
 
 主要工作：
 1. 整理统一的「实验记录规范」
-   - [ ] 在 `doc/` 中补充一份简短规范，定义 `results.jsonl` 的字段约定（`experiment_id`, `ansatz_spec`, `optimizer_spec`, `metrics`, `decision`, `git_diff` 等）。
-   - [ ] 确认 `core/engine.py` 中 JSONL 写入逻辑与 GA 写入逻辑字段一致。
+   - [x] 在 `doc/` 中补充一份简短规范，定义 `results.jsonl` 的字段约定（`experiment_id`, `ansatz_spec`, `optimizer_spec`, `metrics`, `decision`, `git_diff` 等）。
+   - [x] 确认 `core/engine.py` 中 JSONL 写入逻辑与 GA 写入逻辑字段一致。
 2. 完成 GA / MultiDim / Baseline 的输出对齐
-   - [ ] GA：确保 `GAOptimizer.run()` 输出：
+   - [x] GA：确保 `GAOptimizer.run()` 输出：
      - 最优 `config`，最优 `ansatz_spec`，并在对应 `experiments/*/ga/` 下写 `best_config_ga.json`。
-   - [ ] MultiDim：通过 `ansatz_search` 在 `experiments/*/multidim/` 下写 `best_config_multidim.json`。
-   - [ ] Baseline：为每个 Baseline 生成 `AnsatzSpec` 风格描述，并写入同一 JSONL。
+   - [x] MultiDim：通过 `ansatz_search` 在 `experiments/*/multidim/` 下写 `best_config_multidim.json`。
+   - [x] Baseline：为每个 Baseline 生成 `AnsatzSpec` 风格描述，并写入同一 JSONL。
 3. 增强 `SearchController`
-   - [ ] 检查并补充日志输出，便于后续策略切换调试。
-   - [ ] 将 `handle_persistent_failure` / `handle_no_improvement` 的 TODO 变为明确的回调接口（例如挂载到 `SearchOrchestrator`，参见 Phase 2）。
+   - [x] 检查并补充日志输出，便于后续策略切换调试。
+   - [x] 将 `handle_persistent_failure` / `handle_no_improvement` 的 TODO 变为明确的回调接口（例如挂载到 `SearchOrchestrator`，参见 Phase 2）。
 
 产出：
-- 一套统一的结果记录格式。
+- 一套统一的结果记录格式（已发布：[logging_spec.md](file:///Users/qianlong/tries/2026-03-10-auto-vqe/doc/logging_spec.md)）。
 - GA、MultiDim、Baseline 的最优配置文件位置和命名规则固定下来。
 
 ---

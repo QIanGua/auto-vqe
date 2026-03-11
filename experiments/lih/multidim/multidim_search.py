@@ -62,12 +62,6 @@ def run_multidim_search():
         sub_dir=None,  # 直接在 multidim/ 下写日志和报告
     )
 
-    best_config = result["best_config"]
-    if best_config is not None:
-        out_path = os.path.join(exp_dir, "best_config_multidim.json")
-        with open(out_path, "w") as f:
-            json.dump(best_config, f, indent=4)
-
     return result
 
 

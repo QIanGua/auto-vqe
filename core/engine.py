@@ -531,6 +531,15 @@ def ansatz_search(
         )
         logger.info(f"Report generated at: {report_path}")
 
+        # Explicitly save the best config for MultiDim search
+        config_path = os.path.join(exp_dir, "best_config_multidim.json")
+        try:
+            with open(config_path, "w") as f:
+                json.dump(best_overall_config, f, indent=4)
+            logger.info(f"Best MultiDim config saved to {config_path}")
+        except Exception as e:
+            logger.error(f"Failed to save best config: {e}")
+
         return {
             "best_config": best_overall_config,
             "best_results": best_overall,

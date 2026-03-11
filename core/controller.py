@@ -22,6 +22,10 @@ class SearchController:
         self.failure_limit = failure_limit
         self.improvement_threshold = improvement_threshold
         self.logger = logger or logging.getLogger("SearchController")
+        
+        # Callbacks for strategy management (to be fully implemented in Phase 2)
+        self.on_strategy_switch = None
+        self.on_space_reduction = None
 
         # 状态追踪
         self.start_time = time.time()
@@ -80,14 +84,24 @@ class SearchController:
 
     def handle_persistent_failure(self):
         """处理持续失败的情况"""
-        self.logger.error(f"Persistent failure detected ({self.consecutive_failures} times). Triggering search space reduction.")
-        # 这里可以触发具体的回调，例如缩小搜索空间或切换策略
+        self.logger.error(
+            f"!!! PERSISTENT FAILURE !!! Detected {self.consecutive_failures} consecutive failures. "
+            f"Total runs: {self.total_runs}. Elapsed: {self.elapsed_time:.1f}s. "
+            f"Triggering search space reduction."
+        )
+        if self.on_space_reduction:
+            self.on_space_reduction(self)
         self.consecutive_failures = 0 # 重置以允许新策略尝试
 
     def handle_no_improvement(self):
         """处理长时间无进展的情况"""
-        self.logger.warning(f"No improvement for {self.no_improvement_limit} rounds. Triggering strategy switch.")
-        # 触发策略切换逻辑
+        self.logger.warning(
+            f"--- NO IMPROVEMENT --- No progress for {self.no_improvement_limit} rounds. "
+            f"Best Energy so far: {self.best_energy:.6f}. Total runs: {self.total_runs}. "
+            f"Triggering strategy switch."
+        )
+        if self.on_strategy_switch:
+            self.on_strategy_switch(self)
         self.consecutive_no_improvement = 0 # 重置以允许新策略观察
 
     def stop(self, reason: str):
