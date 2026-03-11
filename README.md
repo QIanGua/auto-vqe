@@ -8,18 +8,20 @@ An experiment to let LLMs automatically explore quantum circuit structures (Ansa
 
 ## Overview
 
-The goal of this project is to use AI agents to iteratively design and optimize quantum circuits.  
-The agent explores the "Conjecture" space (ansatz definitions in `experiments/*/run.py`) while being constrained by "Objective Reality" (Hamiltonians in `experiments/*/env.py` and the shared environment base class in `core/base_env.py`).
+Auto-VQE is a **pluggable search framework** designed to let AI agents (LLMs or classical search algorithms) automatically design optimal quantum circuit structures (Ansatz). It bridges the gap between high-level "Conjectures" (ansatz definitions) and the "Objective Reality" of quantum Hamiltonians.
 
-## Core Components
+**Key Evolutions:**
+- **From Scripts to Framework**: No longer tied to a specific search algorithm; it provides a unified abstraction layer for any structural optimization strategy.
+- **Scalability-First**: Built with high-qubit systems (50-100+ qubits) in mind, employing a structural config-driven orchestration.
+- **Auditable Science**: Every run is captured in a structured, searchable JSONL database with automated human-readable reports.
 
-- **`core/circuit_factory.py` (The Compiler)**: The central hub for building quantum circuits from structured JSON configurations. It handles gate types, entanglement topologies, and parameter counting.
-- **`core/search_algorithms.py` (The Architect)**: Implements evolutionary strategies like **Genetic Algorithms (GA)** to intelligently navigate the massive ansatz design space.
-- **`experiments/tfim/run.py`, `experiments/lih/run.py` (Execution Engine)**: Now support **Config-Driven Execution**. They automatically load `best_config.json` produced by the search phase, decouples physical hypotheses from Python code.
-- **`core/engine.py`**: Provides the reusable VQE training loop, logging utilities, and automatic experiment report generation.
-- **`core/controller.py` (The Overseer)**: Manages experimental budgets (max runs, wall-clock time) and monitors search progress. Now includes **`SearchOrchestrator`** for multi-strategy execution.
-- **`core/strategy_base.py` (The Protocol)**: Defines the common interface for all search algorithms (GA, Grid, etc.), enabling plug-and-play strategies.
-- **`doc/logging_spec.md`**: Defines the unified structured logging schema for the project.
+## Core Architecture
+
+- **`core/strategy_base.py` (The Protocol)**: The base interface for all search algorithms. It allows you to plug in anything from Genetic Algorithms to ADAPT-VQE or Reinforcement Learning as a "Strategy".
+- **`core/controller.py` (The Brain)**: Manages experiment budgets and stopping rules. Includes the **`SearchOrchestrator`**, which can chain multiple strategies (e.g., broad GA search followed by fine-grained grid scanning).
+- **`core/circuit_factory.py` (The Compiler)**: Translates structured JSON configs into executable quantum circuits. This decouples the search logic from the implementation details.
+- **`core/engine.py` (The Valve)**: The unified VQE training loop and logging engine. It ensures every experiment follows the same evaluation and reporting standard.
+- **`doc/logging_spec.md`**: Defines the "Single Source of Truth" schema for experiment records.
 - **`program.md`**: The experimental protocol and rules guiding the AI's exploration.
 - **`baselines/` (Baseline Zoo)**: A standardized set of strong VQE baselines, each exposing `build_ansatz(env, config) -> AnsatzSpec`:
   - `baselines.hea` – hardware-efficient ansatz
@@ -133,18 +135,20 @@ uv run python experiments/tfim/auto_search.py
 
 ## 项目概览
 
-本项目旨在通过 AI Agent 迭代设计和优化量子线路。  
-Agent 在“客观现实”（`core/base_env.py` 以及 `experiments/*/env.py` 中的哈密顿量）的约束下，探索“假设空间”（`experiments/*/run.py` 中的 ansatz 定义）。
+Auto-VQE 是一个**可插拔的搜索框架**，旨在让 AI Agent（LLM 或经典搜索算法）自动设计最优量子线路结构（Ansatz）。它在“客观现实”（哈密顿量）与“猜想空间”（线路定义）之间建立了一个结构化的迭代反馈环。
 
-## 核心组件
+**核心演进：**
+- **从脚本到框架**：不再绑定于特定算法。提供统一的抽象层，任何结构优化策略（GA、Grid、ADAPT-VQE 等）均可作为插件接入。
+- **面向大规模扩展**：架构专为 50-100+ 比特的大规模量子系统实验设计，采用配置驱动的策略编排。
+- **可审计的科学实验**：每一轮实验均产生结构化的 JSONL 记录与自动生成的 Markdown 实验报告，确保过程可回溯、结果可复现。
 
-- **`core/circuit_factory.py`（线路编译器）**：核心组件，将结构化的 JSON 配置编译为量子线路。负责门类型、纠缠拓扑和参数计数逻辑。
-- **`core/search_algorithms.py`（搜索算法库）**：实现**遗传算法 (GA)** 等进化策略，在数万种架构组合中智能导航，寻找最优解。
-- **`experiments/tfim/run.py`、`experiments/lih/run.py`（执行引擎）**：现已支持**配置驱动模式**。自动加载搜索阶段产出的 `best_config.json`，实现了物理猜想与 Python 线路代码的完全解耦。
-- **`core/engine.py`**：提供通用的 VQE 训练循环、日志记录与自动报告生成。
-- **`core/controller.py`（实验监考官）**：管理实验预算（最大运行次数、耗时上限），监控搜索进度。现包含 **`SearchOrchestrator`** 编排器实现策略自动切换。
-- **`core/strategy_base.py`（策略协议库）**：定义了所有搜索算法（GA、Grid 等）的统一接口 `SearchStrategy`，支持热插拔。
-- **`doc/logging_spec.md`**：定义了本项目统一的结构化日志记录规范。
+## 核心架构
+
+- **`core/strategy_base.py`（策略协议库）**：定义了所有搜索算法的统一接口 `SearchStrategy`。支持将 GA、BO、ADAPT-VQE、RL 等搜索逻辑作为插件热插拔。
+- **`core/controller.py`（决策大脑）**：管理实验预算与停止规则。包含 **`SearchOrchestrator`**（策略编排器），支持多策略链式执行（如先粗搜再精扫）。
+- **`core/circuit_factory.py`（线路编译器）**：将结构化的 JSON 配置编译为量子线路，实现“物理猜想”与“代码实现”的完全解耦。
+- **`core/engine.py`（运行基石）**：提供通用的 VQE 训练循环、结构化日志记录与自动化报告生成。
+- **`doc/logging_spec.md`**：定义了本项目统一的结构化实验事件流规范。
 - **`program.md`**：指导 AI 探索的实验手册和规则。
 - **`baselines/`（Baseline Zoo）**：一组**标准化基线 ansatz**，统一实现接口 `build_ansatz(env, config) -> AnsatzSpec`，便于：
   - Agent 在“强基线池”上进行探索与对比；
