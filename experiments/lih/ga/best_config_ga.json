@@ -1,0 +1,11 @@
+{
+    "init_state": "zero",
+    "layers": 3,
+    "single_qubit_gates": [
+        "rx",
+        "ry",
+        "rz"
+    ],
+    "two_qubit_gate": "rxx_ryy_rzz",
+    "entanglement": "full"
+}

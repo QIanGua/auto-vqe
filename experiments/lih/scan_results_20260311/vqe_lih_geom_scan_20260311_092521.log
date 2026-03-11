@@ -1,0 +1,202 @@
+--- LiH Geometry Scan (structure transfer) ---
+Ansatz config: {'init_state': 'zero', 'layers': 3, 'single_qubit_gates': ['rx', 'ry', 'rz'], 'two_qubit_gate': 'rxx_ryy_rzz', 'entanglement': 'full'}
+
+=== Geometry R = 0.800 Å ===
+Target energies: active_exact=-7.61591576, full_FCI=-5.64975279
+--- Trial 1/2 at R=0.800 Å ---
+Step 0, Energy: -7.299151, LR: 5.00e-02
+Step 100, Energy: -7.615914, LR: 5.00e-02
+Step 200, Energy: -7.615918, LR: 5.00e-02
+Step 300, Energy: -7.615918, LR: 5.00e-02
+Step 400, Energy: -7.615918, LR: 5.00e-02
+Step 500, Energy: -7.615917, LR: 5.00e-02
+Step 600, Energy: -7.615918, LR: 5.00e-02
+Step 700, Energy: -7.615917, LR: 5.00e-02
+--- Trial 2/2 at R=0.800 Å ---
+Step 0, Energy: -7.392473, LR: 5.00e-02
+Step 100, Energy: -7.615911, LR: 5.00e-02
+Step 200, Energy: -7.615918, LR: 5.00e-02
+Step 300, Energy: -7.615918, LR: 5.00e-02
+Step 400, Energy: -7.615917, LR: 5.00e-02
+Step 500, Energy: -7.615916, LR: 5.00e-02
+Step 600, Energy: -7.615917, LR: 5.00e-02
+Step 700, Energy: -7.615918, LR: 5.00e-02
+Best at R=0.800 Å: val=-7.61590624, active_exact=-7.61591576, ansatz_err=9.524e-06, full_FCI=-5.64975279, err_vs_full=1.966e+00, trunc_err=1.966e+00
+
+=== Geometry R = 1.000 Å ===
+Target energies: active_exact=-7.76749670, full_FCI=-6.19692865
+--- Trial 1/2 at R=1.000 Å ---
+Step 0, Energy: -7.421154, LR: 5.00e-02
+Step 100, Energy: -7.767494, LR: 5.00e-02
+Step 200, Energy: -7.767498, LR: 5.00e-02
+Step 300, Energy: -7.767496, LR: 5.00e-02
+Step 400, Energy: -7.767496, LR: 5.00e-02
+Step 500, Energy: -7.767496, LR: 5.00e-02
+Step 600, Energy: -7.767496, LR: 5.00e-02
+Step 700, Energy: -7.767492, LR: 5.00e-02
+--- Trial 2/2 at R=1.000 Å ---
+Step 0, Energy: -7.517861, LR: 5.00e-02
+Step 100, Energy: -7.767496, LR: 5.00e-02
+Step 200, Energy: -7.767497, LR: 5.00e-02
+Step 300, Energy: -7.767496, LR: 5.00e-02
+Step 400, Energy: -7.767496, LR: 5.00e-02
+Step 500, Energy: -7.767497, LR: 5.00e-02
+Step 600, Energy: -7.767495, LR: 5.00e-02
+Step 700, Energy: -7.767496, LR: 5.00e-02
+Best at R=1.000 Å: val=-7.76749706, active_exact=-7.76749670, ansatz_err=3.617e-07, full_FCI=-6.19692865, err_vs_full=1.571e+00, trunc_err=1.571e+00
+
+=== Geometry R = 1.200 Å ===
+Target energies: active_exact=-7.83576681, full_FCI=-6.52948783
+--- Trial 1/2 at R=1.200 Å ---
+Step 0, Energy: -7.484532, LR: 5.00e-02
+Step 100, Energy: -7.835763, LR: 5.00e-02
+Step 200, Energy: -7.835768, LR: 5.00e-02
+Step 300, Energy: -7.835767, LR: 5.00e-02
+Step 400, Energy: -7.835767, LR: 5.00e-02
+Step 500, Energy: -7.835767, LR: 5.00e-02
+Step 600, Energy: -7.835767, LR: 5.00e-02
+Step 700, Energy: -7.835769, LR: 5.00e-02
+--- Trial 2/2 at R=1.200 Å ---
+Step 0, Energy: -7.579336, LR: 5.00e-02
+Step 100, Energy: -7.835763, LR: 5.00e-02
+Step 200, Energy: -7.835767, LR: 5.00e-02
+Step 300, Energy: -7.835767, LR: 5.00e-02
+Step 400, Energy: -7.835768, LR: 5.00e-02
+Step 500, Energy: -7.835767, LR: 5.00e-02
+Step 600, Energy: -7.835761, LR: 5.00e-02
+Step 700, Energy: -7.835767, LR: 5.00e-02
+Best at R=1.200 Å: val=-7.83576679, active_exact=-7.83576681, ansatz_err=1.457e-08, full_FCI=-6.52948783, err_vs_full=1.306e+00, trunc_err=1.306e+00
+
+=== Geometry R = 1.400 Å ===
+Target energies: active_exact=-7.86072951, full_FCI=-6.74450249
+--- Trial 1/2 at R=1.400 Å ---
+Step 0, Energy: -7.518177, LR: 5.00e-02
+Step 100, Energy: -7.860724, LR: 5.00e-02
+Step 200, Energy: -7.860731, LR: 5.00e-02
+Step 300, Energy: -7.860731, LR: 5.00e-02
+Step 400, Energy: -7.860731, LR: 5.00e-02
+Step 500, Energy: -7.860732, LR: 5.00e-02
+Step 600, Energy: -7.860731, LR: 5.00e-02
+Step 700, Energy: -7.860731, LR: 5.00e-02
+--- Trial 2/2 at R=1.400 Å ---
+Step 0, Energy: -7.608386, LR: 5.00e-02
+Step 100, Energy: -7.860726, LR: 5.00e-02
+Step 200, Energy: -7.860731, LR: 5.00e-02
+Step 300, Energy: -7.860732, LR: 5.00e-02
+Step 400, Energy: -7.860731, LR: 5.00e-02
+Step 500, Energy: -7.860731, LR: 5.00e-02
+Step 600, Energy: -7.860672, LR: 5.00e-02
+Step 700, Energy: -7.860732, LR: 5.00e-02
+Best at R=1.400 Å: val=-7.86073065, active_exact=-7.86072951, ansatz_err=1.142e-06, full_FCI=-6.74450249, err_vs_full=1.116e+00, trunc_err=1.116e+00
+
+=== Geometry R = 1.600 Å ===
+Target energies: active_exact=-7.86212883, full_FCI=-6.89011711
+--- Trial 1/2 at R=1.600 Å ---
+Step 0, Energy: -7.535569, LR: 5.00e-02
+Step 100, Energy: -7.862125, LR: 5.00e-02
+Step 200, Energy: -7.862129, LR: 5.00e-02
+Early stop at step 274: converged (window=50, threshold=1.0e-08)
+--- Trial 2/2 at R=1.600 Å ---
+Step 0, Energy: -7.619830, LR: 5.00e-02
+Step 100, Energy: -7.862127, LR: 5.00e-02
+Step 200, Energy: -7.862129, LR: 5.00e-02
+Early stop at step 264: converged (window=50, threshold=1.0e-08)
+Best at R=1.600 Å: val=-7.86212969, active_exact=-7.86212883, ansatz_err=8.548e-07, full_FCI=-6.89011711, err_vs_full=9.720e-01, trunc_err=9.720e-01
+
+=== Geometry R = 1.800 Å ===
+Target energies: active_exact=-7.85041279, full_FCI=-6.99256201
+--- Trial 1/2 at R=1.800 Å ---
+Step 0, Energy: -7.543725, LR: 5.00e-02
+Step 100, Energy: -7.850410, LR: 5.00e-02
+Step 200, Energy: -7.850413, LR: 5.00e-02
+Step 300, Energy: -7.850415, LR: 5.00e-02
+Early stop at step 322: converged (window=50, threshold=1.0e-08)
+--- Trial 2/2 at R=1.800 Å ---
+Step 0, Energy: -7.621324, LR: 5.00e-02
+Step 100, Energy: -7.850410, LR: 5.00e-02
+Step 200, Energy: -7.850413, LR: 5.00e-02
+Early stop at step 294: converged (window=50, threshold=1.0e-08)
+Best at R=1.800 Å: val=-7.85041523, active_exact=-7.85041279, ansatz_err=2.444e-06, full_FCI=-6.99256201, err_vs_full=8.579e-01, trunc_err=8.579e-01
+
+=== Geometry R = 2.000 Å ===
+Target energies: active_exact=-7.83153363, full_FCI=-7.06732196
+--- Trial 1/2 at R=2.000 Å ---
+Step 0, Energy: -7.546709, LR: 5.00e-02
+Step 100, Energy: -7.831531, LR: 5.00e-02
+Step 200, Energy: -7.831532, LR: 5.00e-02
+Early stop at step 297: converged (window=50, threshold=1.0e-08)
+--- Trial 2/2 at R=2.000 Å ---
+Step 0, Energy: -7.617230, LR: 5.00e-02
+Step 100, Energy: -7.831531, LR: 5.00e-02
+Step 200, Energy: -7.831533, LR: 5.00e-02
+Step 300, Energy: -7.831535, LR: 5.00e-02
+Early stop at step 300: converged (window=50, threshold=1.0e-08)
+Best at R=2.000 Å: val=-7.83153534, active_exact=-7.83153363, ansatz_err=1.714e-06, full_FCI=-7.06732196, err_vs_full=7.642e-01, trunc_err=7.642e-01
+
+=== Geometry R = 2.500 Å ===
+Target energies: active_exact=-7.77354413, full_FCI=-7.18871123
+--- Trial 1/2 at R=2.500 Å ---
+Step 0, Energy: -7.546348, LR: 5.00e-02
+Step 100, Energy: -7.773543, LR: 5.00e-02
+Step 200, Energy: -7.773546, LR: 5.00e-02
+Step 300, Energy: -7.773545, LR: 5.00e-02
+Step 400, Energy: -7.773545, LR: 5.00e-02
+Step 500, Energy: -7.773544, LR: 5.00e-02
+Step 600, Energy: -7.773545, LR: 5.00e-02
+Step 700, Energy: -7.773537, LR: 5.00e-02
+--- Trial 2/2 at R=2.500 Å ---
+Step 0, Energy: -7.597975, LR: 5.00e-02
+Step 100, Energy: -7.773541, LR: 5.00e-02
+Step 200, Energy: -7.773545, LR: 5.00e-02
+Step 300, Energy: -7.773545, LR: 5.00e-02
+Step 400, Energy: -7.773544, LR: 5.00e-02
+Step 500, Energy: -7.773545, LR: 5.00e-02
+Step 600, Energy: -7.773545, LR: 5.00e-02
+Step 700, Energy: -7.773545, LR: 5.00e-02
+Best at R=2.500 Å: val=-7.77354527, active_exact=-7.77354413, ansatz_err=1.132e-06, full_FCI=-7.18871123, err_vs_full=5.848e-01, trunc_err=5.848e-01
+
+=== Geometry R = 3.000 Å ===
+Target energies: active_exact=-7.72642814, full_FCI=-7.26966595
+--- Trial 1/2 at R=3.000 Å ---
+Step 0, Energy: -7.550506, LR: 5.00e-02
+Step 100, Energy: -7.726427, LR: 5.00e-02
+Step 200, Energy: -7.726428, LR: 5.00e-02
+Step 300, Energy: -7.726427, LR: 5.00e-02
+Step 400, Energy: -7.726427, LR: 5.00e-02
+Step 500, Energy: -7.726427, LR: 5.00e-02
+Step 600, Energy: -7.726421, LR: 5.00e-02
+Step 700, Energy: -7.726427, LR: 5.00e-02
+--- Trial 2/2 at R=3.000 Å ---
+Step 0, Energy: -7.582350, LR: 5.00e-02
+Step 100, Energy: -7.726424, LR: 5.00e-02
+Step 200, Energy: -7.726427, LR: 5.00e-02
+Step 300, Energy: -7.726427, LR: 5.00e-02
+Step 400, Energy: -7.726427, LR: 5.00e-02
+Step 500, Energy: -7.726427, LR: 5.00e-02
+Step 600, Energy: -7.726427, LR: 5.00e-02
+Step 700, Energy: -7.725809, LR: 5.00e-02
+Best at R=3.000 Å: val=-7.72642851, active_exact=-7.72642814, ansatz_err=3.685e-07, full_FCI=-7.26966595, err_vs_full=4.568e-01, trunc_err=4.568e-01
+
+=== Geometry R = 4.000 Å ===
+Target energies: active_exact=-7.74939369, full_FCI=-7.38739527
+--- Trial 1/2 at R=4.000 Å ---
+Step 0, Energy: -7.573680, LR: 5.00e-02
+Step 100, Energy: -7.749392, LR: 5.00e-02
+Step 200, Energy: -7.749394, LR: 5.00e-02
+Step 300, Energy: -7.749394, LR: 5.00e-02
+Step 400, Energy: -7.749395, LR: 5.00e-02
+Step 500, Energy: -7.749394, LR: 5.00e-02
+Step 600, Energy: -7.749394, LR: 5.00e-02
+Step 700, Energy: -7.749357, LR: 5.00e-02
+--- Trial 2/2 at R=4.000 Å ---
+Step 0, Energy: -7.584805, LR: 5.00e-02
+Step 100, Energy: -7.749393, LR: 5.00e-02
+Step 200, Energy: -7.749394, LR: 5.00e-02
+Step 300, Energy: -7.749394, LR: 5.00e-02
+Step 400, Energy: -7.749393, LR: 5.00e-02
+Step 500, Energy: -7.749394, LR: 5.00e-02
+Step 600, Energy: -7.749394, LR: 5.00e-02
+Step 700, Energy: -7.749391, LR: 5.00e-02
+Best at R=4.000 Å: val=-7.74939442, active_exact=-7.74939369, ansatz_err=7.223e-07, full_FCI=-7.38739527, err_vs_full=3.620e-01, trunc_err=3.620e-01
+
+Geometry scan curve saved to: /Users/qianlong/tries/2026-03-10-auto-vqe/experiments/lih/lih_geometry_curve_20260311_092521.tsv

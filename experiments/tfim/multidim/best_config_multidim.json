@@ -1,0 +1,6 @@
+{
+  "entanglement": "linear",
+  "layers": 3,
+  "single_qubit_gates": ["ry"],
+  "two_qubit_gate": "cnot"
+}

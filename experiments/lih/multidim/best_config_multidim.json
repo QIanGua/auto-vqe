@@ -1,0 +1,7 @@
+{
+  "entanglement": "linear",
+  "init_state": "zero",
+  "layers": 2,
+  "single_qubit_gates": ["ry"],
+  "two_qubit_gate": "cnot"
+}

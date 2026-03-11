@@ -1,0 +1,636 @@
+=== Ansatz Search: TFIM_MultiDim ===
+Target Energy: -4.758770
+
+--- Config 1/36: entanglement=linear, layers=1, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=1000
+Step 0, Energy: -3.740053, LR: 1.00e-02
+Step 100, Energy: -3.828421, LR: 1.00e-02
+Step 200, Energy: -3.828428, LR: 1.00e-02
+Step 300, Energy: -3.828427, LR: 1.00e-02
+Step 400, Energy: -3.828427, LR: 1.00e-02
+Early stop at step 433: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1001
+Step 0, Energy: -0.735436, LR: 1.00e-02
+Step 100, Energy: -3.117963, LR: 1.00e-02
+Step 200, Energy: -4.552461, LR: 1.00e-02
+Step 300, Energy: -4.733888, LR: 1.00e-02
+Step 400, Energy: -4.734231, LR: 1.00e-02
+Step 500, Energy: -4.734231, LR: 1.00e-02
+Early stop at step 537: converged (window=50, threshold=1.0e-08)
+Best for config 1: val_energy=-4.734231, num_params=4
+
+--- Config 2/36: entanglement=ring, layers=1, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=1100
+Step 0, Energy: 0.249608, LR: 1.00e-02
+Step 100, Energy: -1.960876, LR: 1.00e-02
+Step 200, Energy: -3.549119, LR: 1.00e-02
+Step 300, Energy: -3.718892, LR: 1.00e-02
+Step 400, Energy: -3.718951, LR: 1.00e-02
+Step 500, Energy: -3.718951, LR: 1.00e-02
+Early stop at step 585: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1101
+Step 0, Energy: -3.319702, LR: 1.00e-02
+Step 100, Energy: -4.498652, LR: 1.00e-02
+Step 200, Energy: -4.498759, LR: 1.00e-02
+Step 300, Energy: -4.498759, LR: 1.00e-02
+Early stop at step 334: converged (window=50, threshold=1.0e-08)
+Best for config 2: val_energy=-4.498759, num_params=4
+
+--- Config 3/36: entanglement=brick, layers=1, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=1200
+Step 0, Energy: 1.464296, LR: 1.00e-02
+Step 100, Energy: -1.098445, LR: 1.00e-02
+Step 200, Energy: -3.428142, LR: 1.00e-02
+Step 300, Energy: -4.218781, LR: 1.00e-02
+Step 400, Energy: -4.430823, LR: 1.00e-02
+Step 500, Energy: -4.470549, LR: 1.00e-02
+  Trial 2/2, seed=1201
+Step 0, Energy: -1.951409, LR: 1.00e-02
+Step 100, Energy: -4.136172, LR: 1.00e-02
+Step 200, Energy: -4.471012, LR: 1.00e-02
+Step 300, Energy: -4.472136, LR: 1.00e-02
+Step 400, Energy: -4.472136, LR: 1.00e-02
+Early stop at step 453: converged (window=50, threshold=1.0e-08)
+Best for config 3: val_energy=-4.472136, num_params=4
+
+--- Config 4/36: entanglement=linear, layers=1, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=1300
+Step 0, Energy: -0.466855, LR: 1.00e-02
+Step 100, Energy: -3.835280, LR: 1.00e-02
+Step 200, Energy: -4.399280, LR: 1.00e-02
+Step 300, Energy: -4.403665, LR: 1.00e-02
+Step 400, Energy: -4.403669, LR: 1.00e-02
+Step 500, Energy: -4.403670, LR: 1.00e-02
+Early stop at step 539: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1301
+Step 0, Energy: -1.786659, LR: 1.00e-02
+Step 100, Energy: -3.946105, LR: 1.00e-02
+Step 200, Energy: -4.402573, LR: 1.00e-02
+Step 300, Energy: -4.403669, LR: 1.00e-02
+Step 400, Energy: -4.403670, LR: 1.00e-02
+Early stop at step 487: converged (window=50, threshold=1.0e-08)
+Best for config 4: val_energy=-4.403670, num_params=7
+
+--- Config 5/36: entanglement=ring, layers=1, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=1400
+Step 0, Energy: -2.127667, LR: 1.00e-02
+Step 100, Energy: -4.209868, LR: 1.00e-02
+Step 200, Energy: -4.402285, LR: 1.00e-02
+Step 300, Energy: -4.403669, LR: 1.00e-02
+Step 400, Energy: -4.403669, LR: 1.00e-02
+Early stop at step 439: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1401
+Step 0, Energy: -1.830859, LR: 1.00e-02
+Step 100, Energy: -4.173725, LR: 1.00e-02
+Step 200, Energy: -4.399978, LR: 1.00e-02
+Step 300, Energy: -4.403670, LR: 1.00e-02
+Step 400, Energy: -4.403668, LR: 1.00e-02
+Early stop at step 427: converged (window=50, threshold=1.0e-08)
+Best for config 5: val_energy=-4.403669, num_params=8
+
+--- Config 6/36: entanglement=brick, layers=1, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=1500
+Step 0, Energy: -2.322837, LR: 1.00e-02
+Step 100, Energy: -4.369885, LR: 1.00e-02
+Step 200, Energy: -4.403666, LR: 1.00e-02
+Step 300, Energy: -4.403670, LR: 1.00e-02
+Step 400, Energy: -4.403669, LR: 1.00e-02
+Early stop at step 429: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1501
+Step 0, Energy: 0.047868, LR: 1.00e-02
+Step 100, Energy: -3.523307, LR: 1.00e-02
+Step 200, Energy: -4.403542, LR: 1.00e-02
+Step 300, Energy: -4.403670, LR: 1.00e-02
+Step 400, Energy: -4.403669, LR: 1.00e-02
+Early stop at step 460: converged (window=50, threshold=1.0e-08)
+Best for config 6: val_energy=-4.403670, num_params=6
+
+--- Config 7/36: entanglement=linear, layers=1, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=1600
+Step 0, Energy: -2.821308, LR: 1.00e-02
+Step 100, Energy: -4.705937, LR: 1.00e-02
+Step 200, Energy: -4.734222, LR: 1.00e-02
+Step 300, Energy: -4.734231, LR: 1.00e-02
+Step 400, Energy: -4.734230, LR: 1.00e-02
+Early stop at step 410: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1601
+Step 0, Energy: -2.232822, LR: 1.00e-02
+Step 100, Energy: -4.661551, LR: 1.00e-02
+Step 200, Energy: -4.734231, LR: 1.00e-02
+Step 300, Energy: -4.734231, LR: 1.00e-02
+Early stop at step 384: converged (window=50, threshold=1.0e-08)
+Best for config 7: val_energy=-4.734231, num_params=8
+
+--- Config 8/36: entanglement=ring, layers=1, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=1700
+Step 0, Energy: -0.468481, LR: 1.00e-02
+Step 100, Energy: -3.026939, LR: 1.00e-02
+Step 200, Energy: -3.713980, LR: 1.00e-02
+Step 300, Energy: -4.498125, LR: 1.00e-02
+Step 400, Energy: -4.498758, LR: 1.00e-02
+Step 500, Energy: -4.498758, LR: 1.00e-02
+Early stop at step 529: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1701
+Step 0, Energy: -1.917024, LR: 1.00e-02
+Step 100, Energy: -3.001775, LR: 1.00e-02
+Step 200, Energy: -3.630620, LR: 1.00e-02
+Step 300, Energy: -3.718715, LR: 1.00e-02
+Step 400, Energy: -3.718951, LR: 1.00e-02
+Step 500, Energy: -3.718951, LR: 1.00e-02
+Early stop at step 565: converged (window=50, threshold=1.0e-08)
+Best for config 8: val_energy=-4.498758, num_params=8
+
+--- Config 9/36: entanglement=brick, layers=1, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=1800
+Step 0, Energy: -1.423138, LR: 1.00e-02
+Step 100, Energy: -4.333778, LR: 1.00e-02
+Step 200, Energy: -4.472108, LR: 1.00e-02
+Step 300, Energy: -4.472135, LR: 1.00e-02
+Step 400, Energy: -4.472136, LR: 1.00e-02
+Early stop at step 433: converged (window=50, threshold=1.0e-08)
+  Trial 2/2, seed=1801
+Step 0, Energy: -2.822375, LR: 1.00e-02
+Step 100, Energy: -4.255869, LR: 1.00e-02
+Step 200, Energy: -4.457865, LR: 1.00e-02
+Step 300, Energy: -4.472005, LR: 1.00e-02
+Step 400, Energy: -4.472136, LR: 1.00e-02
+Step 500, Energy: -4.472136, LR: 1.00e-02
+Early stop at step 592: converged (window=50, threshold=1.0e-08)
+Best for config 9: val_energy=-4.472136, num_params=8
+
+--- Config 10/36: entanglement=linear, layers=1, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=1900
+Step 0, Energy: -1.091984, LR: 1.00e-02
+Step 100, Energy: -4.178377, LR: 1.00e-02
+Step 200, Energy: -4.236913, LR: 1.00e-02
+Step 300, Energy: -4.257981, LR: 1.00e-02
+Step 400, Energy: -4.305570, LR: 1.00e-02
+Step 500, Energy: -4.383241, LR: 1.00e-02
+  Trial 2/2, seed=1901
+Step 0, Energy: -1.927197, LR: 1.00e-02
+Step 100, Energy: -4.048576, LR: 1.00e-02
+Step 200, Energy: -4.336382, LR: 1.00e-02
+Step 300, Energy: -4.401500, LR: 1.00e-02
+Step 400, Energy: -4.403654, LR: 1.00e-02
+Step 500, Energy: -4.403668, LR: 1.00e-02
+Early stop at step 552: converged (window=50, threshold=1.0e-08)
+Best for config 10: val_energy=-4.403669, num_params=11
+
+--- Config 11/36: entanglement=ring, layers=1, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=2000
+Step 0, Energy: -1.853488, LR: 1.00e-02
+Step 100, Energy: -3.942301, LR: 1.00e-02
+Step 200, Energy: -4.063955, LR: 1.00e-02
+Step 300, Energy: -4.178550, LR: 1.00e-02
+Step 400, Energy: -4.183731, LR: 1.00e-02
+Step 500, Energy: -4.210850, LR: 1.00e-02
+  Trial 2/2, seed=2001
+Step 0, Energy: 1.133932, LR: 1.00e-02
+Step 100, Energy: -3.807605, LR: 1.00e-02
+Step 200, Energy: -4.390462, LR: 1.00e-02
+Step 300, Energy: -4.403377, LR: 1.00e-02
+Step 400, Energy: -4.403660, LR: 1.00e-02
+Step 500, Energy: -4.403669, LR: 1.00e-02
+Early stop at step 586: converged (window=50, threshold=1.0e-08)
+Best for config 11: val_energy=-4.403668, num_params=12
+
+--- Config 12/36: entanglement=brick, layers=1, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=2100
+Step 0, Energy: -2.172950, LR: 1.00e-02
+Step 100, Energy: -4.098258, LR: 1.00e-02
+Step 200, Energy: -4.195662, LR: 1.00e-02
+Step 300, Energy: -4.227660, LR: 1.00e-02
+Step 400, Energy: -4.330501, LR: 1.00e-02
+Step 500, Energy: -4.403667, LR: 1.00e-02
+  Trial 2/2, seed=2101
+Step 0, Energy: -2.692325, LR: 1.00e-02
+Step 100, Energy: -4.283381, LR: 1.00e-02
+Step 200, Energy: -4.381393, LR: 1.00e-02
+Step 300, Energy: -4.403371, LR: 1.00e-02
+Step 400, Energy: -4.403669, LR: 1.00e-02
+Step 500, Energy: -4.403669, LR: 1.00e-02
+Early stop at step 553: converged (window=50, threshold=1.0e-08)
+Best for config 12: val_energy=-4.403669, num_params=10
+
+--- Config 13/36: entanglement=linear, layers=2, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=2200
+Step 0, Energy: 0.347089, LR: 1.00e-02
+Step 100, Energy: -4.387386, LR: 1.00e-02
+Step 200, Energy: -4.747283, LR: 1.00e-02
+Step 300, Energy: -4.747740, LR: 1.00e-02
+Step 400, Energy: -4.747874, LR: 1.00e-02
+Step 500, Energy: -4.748041, LR: 1.00e-02
+  Trial 2/2, seed=2201
+Step 0, Energy: 0.467352, LR: 1.00e-02
+Step 100, Energy: -3.558681, LR: 1.00e-02
+Step 200, Energy: -4.659023, LR: 1.00e-02
+Step 300, Energy: -4.754249, LR: 1.00e-02
+Step 400, Energy: -4.757323, LR: 1.00e-02
+Step 500, Energy: -4.757414, LR: 1.00e-02
+Best for config 13: val_energy=-4.757415, num_params=8
+
+--- Config 14/36: entanglement=ring, layers=2, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=2300
+Step 0, Energy: -0.069912, LR: 1.00e-02
+Step 100, Energy: -2.976563, LR: 1.00e-02
+Step 200, Energy: -3.648811, LR: 1.00e-02
+Step 300, Energy: -3.902640, LR: 1.00e-02
+Step 400, Energy: -4.049901, LR: 1.00e-02
+Step 500, Energy: -4.059040, LR: 1.00e-02
+  Trial 2/2, seed=2301
+Step 0, Energy: -0.916310, LR: 1.00e-02
+Step 100, Energy: -3.507627, LR: 1.00e-02
+Step 200, Energy: -4.677239, LR: 1.00e-02
+Step 300, Energy: -4.682288, LR: 1.00e-02
+Step 400, Energy: -4.682288, LR: 1.00e-02
+Step 500, Energy: -4.682288, LR: 1.00e-02
+Early stop at step 552: converged (window=50, threshold=1.0e-08)
+Best for config 14: val_energy=-4.682288, num_params=8
+
+--- Config 15/36: entanglement=brick, layers=2, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=2400
+Step 0, Energy: -1.027533, LR: 1.00e-02
+Step 100, Energy: -4.277334, LR: 1.00e-02
+Step 200, Energy: -4.463232, LR: 1.00e-02
+Step 300, Energy: -4.482774, LR: 1.00e-02
+Step 400, Energy: -4.484369, LR: 1.00e-02
+Step 500, Energy: -4.484436, LR: 1.00e-02
+  Trial 2/2, seed=2401
+Step 0, Energy: 0.308598, LR: 1.00e-02
+Step 100, Energy: -4.480027, LR: 1.00e-02
+Step 200, Energy: -4.484403, LR: 1.00e-02
+Step 300, Energy: -4.484433, LR: 1.00e-02
+Step 400, Energy: -4.484436, LR: 1.00e-02
+Step 500, Energy: -4.484436, LR: 1.00e-02
+Best for config 15: val_energy=-4.484436, num_params=8
+
+--- Config 16/36: entanglement=linear, layers=2, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=2500
+Step 0, Energy: -0.440916, LR: 1.00e-02
+Step 100, Energy: -4.448077, LR: 1.00e-02
+Step 200, Energy: -4.454157, LR: 1.00e-02
+Step 300, Energy: -4.457152, LR: 1.00e-02
+Step 400, Energy: -4.459665, LR: 1.00e-02
+Step 500, Energy: -4.461665, LR: 1.00e-02
+  Trial 2/2, seed=2501
+Step 0, Energy: -2.069240, LR: 1.00e-02
+Step 100, Energy: -4.413674, LR: 1.00e-02
+Step 200, Energy: -4.448626, LR: 1.00e-02
+Step 300, Energy: -4.463337, LR: 1.00e-02
+Step 400, Energy: -4.467401, LR: 1.00e-02
+Step 500, Energy: -4.469116, LR: 1.00e-02
+Best for config 16: val_energy=-4.470023, num_params=14
+
+--- Config 17/36: entanglement=ring, layers=2, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=2600
+Step 0, Energy: -0.723789, LR: 1.00e-02
+Step 100, Energy: -4.494606, LR: 1.00e-02
+Step 200, Energy: -4.525457, LR: 1.00e-02
+Step 300, Energy: -4.528435, LR: 1.00e-02
+Step 400, Energy: -4.528540, LR: 1.00e-02
+Step 500, Energy: -4.528611, LR: 1.00e-02
+  Trial 2/2, seed=2601
+Step 0, Energy: 0.059552, LR: 1.00e-02
+Step 100, Energy: -4.237412, LR: 1.00e-02
+Step 200, Energy: -4.421223, LR: 1.00e-02
+Step 300, Energy: -4.449438, LR: 1.00e-02
+Step 400, Energy: -4.460008, LR: 1.00e-02
+Step 500, Energy: -4.461379, LR: 1.00e-02
+Best for config 17: val_energy=-4.528682, num_params=16
+
+--- Config 18/36: entanglement=brick, layers=2, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=2700
+Step 0, Energy: -1.335873, LR: 1.00e-02
+Step 100, Energy: -4.382577, LR: 1.00e-02
+Step 200, Energy: -4.402066, LR: 1.00e-02
+Step 300, Energy: -4.403215, LR: 1.00e-02
+Step 400, Energy: -4.403484, LR: 1.00e-02
+Step 500, Energy: -4.403580, LR: 1.00e-02
+  Trial 2/2, seed=2701
+Step 0, Energy: -0.460137, LR: 1.00e-02
+Step 100, Energy: -4.284000, LR: 1.00e-02
+Step 200, Energy: -4.403665, LR: 1.00e-02
+Step 300, Energy: -4.403670, LR: 1.00e-02
+Step 400, Energy: -4.403669, LR: 1.00e-02
+Early stop at step 415: converged (window=50, threshold=1.0e-08)
+Best for config 18: val_energy=-4.403669, num_params=11
+
+--- Config 19/36: entanglement=linear, layers=2, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=2800
+Step 0, Energy: 0.973647, LR: 1.00e-02
+Step 100, Energy: -3.963377, LR: 1.00e-02
+Step 200, Energy: -4.757216, LR: 1.00e-02
+Step 300, Energy: -4.757517, LR: 1.00e-02
+Step 400, Energy: -4.757519, LR: 1.00e-02
+Step 500, Energy: -4.757520, LR: 1.00e-02
+  Trial 2/2, seed=2801
+Step 0, Energy: -1.847782, LR: 1.00e-02
+Step 100, Energy: -4.613543, LR: 1.00e-02
+Step 200, Energy: -4.743989, LR: 1.00e-02
+Step 300, Energy: -4.744942, LR: 1.00e-02
+Step 400, Energy: -4.745375, LR: 1.00e-02
+Step 500, Energy: -4.745621, LR: 1.00e-02
+Best for config 19: val_energy=-4.757520, num_params=16
+
+--- Config 20/36: entanglement=ring, layers=2, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=2900
+Step 0, Energy: 0.395671, LR: 1.00e-02
+Step 100, Energy: -2.679015, LR: 1.00e-02
+Step 200, Energy: -3.860822, LR: 1.00e-02
+Step 300, Energy: -4.611992, LR: 1.00e-02
+Step 400, Energy: -4.645636, LR: 1.00e-02
+Step 500, Energy: -4.665983, LR: 1.00e-02
+  Trial 2/2, seed=2901
+Step 0, Energy: 0.597691, LR: 1.00e-02
+Step 100, Energy: -3.332706, LR: 1.00e-02
+Step 200, Energy: -3.760539, LR: 1.00e-02
+Step 300, Energy: -3.878599, LR: 1.00e-02
+Step 400, Energy: -3.881938, LR: 1.00e-02
+Step 500, Energy: -3.889658, LR: 1.00e-02
+Best for config 20: val_energy=-4.677652, num_params=16
+
+--- Config 21/36: entanglement=brick, layers=2, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=3000
+Step 0, Energy: -1.935444, LR: 1.00e-02
+Step 100, Energy: -4.157027, LR: 1.00e-02
+Step 200, Energy: -4.339273, LR: 1.00e-02
+Step 300, Energy: -4.434229, LR: 1.00e-02
+Step 400, Energy: -4.480508, LR: 1.00e-02
+Step 500, Energy: -4.484042, LR: 1.00e-02
+  Trial 2/2, seed=3001
+Step 0, Energy: -0.132272, LR: 1.00e-02
+Step 100, Energy: -4.098351, LR: 1.00e-02
+Step 200, Energy: -4.434747, LR: 1.00e-02
+Step 300, Energy: -4.478271, LR: 1.00e-02
+Step 400, Energy: -4.484133, LR: 1.00e-02
+Step 500, Energy: -4.484428, LR: 1.00e-02
+Best for config 21: val_energy=-4.484436, num_params=16
+
+--- Config 22/36: entanglement=linear, layers=2, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=3100
+Step 0, Energy: -2.510677, LR: 1.00e-02
+Step 100, Energy: -4.442795, LR: 1.00e-02
+Step 200, Energy: -4.567502, LR: 1.00e-02
+Step 300, Energy: -4.610115, LR: 1.00e-02
+Step 400, Energy: -4.641424, LR: 1.00e-02
+Step 500, Energy: -4.651552, LR: 1.00e-02
+  Trial 2/2, seed=3101
+Step 0, Energy: -0.209167, LR: 1.00e-02
+Step 100, Energy: -4.263521, LR: 1.00e-02
+Step 200, Energy: -4.517626, LR: 1.00e-02
+Step 300, Energy: -4.546466, LR: 1.00e-02
+Step 400, Energy: -4.566608, LR: 1.00e-02
+Step 500, Energy: -4.627820, LR: 1.00e-02
+Best for config 22: val_energy=-4.652925, num_params=22
+
+--- Config 23/36: entanglement=ring, layers=2, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=3200
+Step 0, Energy: 0.025780, LR: 1.00e-02
+Step 100, Energy: -4.268372, LR: 1.00e-02
+Step 200, Energy: -4.456984, LR: 1.00e-02
+Step 300, Energy: -4.464411, LR: 1.00e-02
+Step 400, Energy: -4.528982, LR: 1.00e-02
+Step 500, Energy: -4.532560, LR: 1.00e-02
+  Trial 2/2, seed=3201
+Step 0, Energy: -1.491199, LR: 1.00e-02
+Step 100, Energy: -3.851562, LR: 1.00e-02
+Step 200, Energy: -4.471004, LR: 1.00e-02
+Step 300, Energy: -4.486094, LR: 1.00e-02
+Step 400, Energy: -4.502734, LR: 1.00e-02
+Step 500, Energy: -4.522413, LR: 1.00e-02
+Best for config 23: val_energy=-4.533101, num_params=24
+
+--- Config 24/36: entanglement=brick, layers=2, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=3300
+Step 0, Energy: -0.693008, LR: 1.00e-02
+Step 100, Energy: -4.337963, LR: 1.00e-02
+Step 200, Energy: -4.458792, LR: 1.00e-02
+Step 300, Energy: -4.464478, LR: 1.00e-02
+Step 400, Energy: -4.492391, LR: 1.00e-02
+Step 500, Energy: -4.532931, LR: 1.00e-02
+  Trial 2/2, seed=3301
+Step 0, Energy: -1.318341, LR: 1.00e-02
+Step 100, Energy: -4.387687, LR: 1.00e-02
+Step 200, Energy: -4.443209, LR: 1.00e-02
+Step 300, Energy: -4.483370, LR: 1.00e-02
+Step 400, Energy: -4.527523, LR: 1.00e-02
+Step 500, Energy: -4.532953, LR: 1.00e-02
+Best for config 24: val_energy=-4.532952, num_params=19
+
+--- Config 25/36: entanglement=linear, layers=3, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=3400
+Step 0, Energy: -0.702655, LR: 1.00e-02
+Step 100, Energy: -4.735308, LR: 1.00e-02
+Step 200, Energy: -4.746055, LR: 1.00e-02
+Step 300, Energy: -4.746105, LR: 1.00e-02
+Step 400, Energy: -4.746174, LR: 1.00e-02
+Step 500, Energy: -4.746258, LR: 1.00e-02
+  Trial 2/2, seed=3401
+Step 0, Energy: -0.659870, LR: 1.00e-02
+Step 100, Energy: -3.902953, LR: 1.00e-02
+Step 200, Energy: -4.060381, LR: 1.00e-02
+Step 300, Energy: -4.241328, LR: 1.00e-02
+Step 400, Energy: -4.755319, LR: 1.00e-02
+Step 500, Energy: -4.758689, LR: 1.00e-02
+Best for config 25: val_energy=-4.758714, num_params=12
+
+--- Config 26/36: entanglement=ring, layers=3, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=3500
+Step 0, Energy: -0.640307, LR: 1.00e-02
+Step 100, Energy: -3.713776, LR: 1.00e-02
+Step 200, Energy: -4.056072, LR: 1.00e-02
+Step 300, Energy: -4.064164, LR: 1.00e-02
+Step 400, Energy: -4.064178, LR: 1.00e-02
+Step 500, Energy: -4.064179, LR: 1.00e-02
+  Trial 2/2, seed=3501
+Step 0, Energy: 1.119249, LR: 1.00e-02
+Step 100, Energy: -3.450770, LR: 1.00e-02
+Step 200, Energy: -4.680188, LR: 1.00e-02
+Step 300, Energy: -4.730989, LR: 1.00e-02
+Step 400, Energy: -4.730989, LR: 1.00e-02
+Step 500, Energy: -4.730990, LR: 1.00e-02
+Best for config 26: val_energy=-4.730991, num_params=12
+
+--- Config 27/36: entanglement=brick, layers=3, single_qubit_gates=['ry'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=3600
+Step 0, Energy: -0.619067, LR: 1.00e-02
+Step 100, Energy: -4.390855, LR: 1.00e-02
+Step 200, Energy: -4.475455, LR: 1.00e-02
+Step 300, Energy: -4.622439, LR: 1.00e-02
+Step 400, Energy: -4.643443, LR: 1.00e-02
+Step 500, Energy: -4.649620, LR: 1.00e-02
+  Trial 2/2, seed=3601
+Step 0, Energy: -1.339523, LR: 1.00e-02
+Step 100, Energy: -4.243208, LR: 1.00e-02
+Step 200, Energy: -4.568470, LR: 1.00e-02
+Step 300, Energy: -4.632113, LR: 1.00e-02
+Step 400, Energy: -4.643940, LR: 1.00e-02
+Step 500, Energy: -4.648499, LR: 1.00e-02
+Best for config 27: val_energy=-4.651962, num_params=12
+
+--- Config 28/36: entanglement=linear, layers=3, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=3700
+Step 0, Energy: 0.776299, LR: 1.00e-02
+Step 100, Energy: -4.288456, LR: 1.00e-02
+Step 200, Energy: -4.402429, LR: 1.00e-02
+Step 300, Energy: -4.524569, LR: 1.00e-02
+Step 400, Energy: -4.596602, LR: 1.00e-02
+Step 500, Energy: -4.646253, LR: 1.00e-02
+  Trial 2/2, seed=3701
+Step 0, Energy: -0.143806, LR: 1.00e-02
+Step 100, Energy: -4.393680, LR: 1.00e-02
+Step 200, Energy: -4.500155, LR: 1.00e-02
+Step 300, Energy: -4.565289, LR: 1.00e-02
+Step 400, Energy: -4.629764, LR: 1.00e-02
+Step 500, Energy: -4.652291, LR: 1.00e-02
+Best for config 28: val_energy=-4.655304, num_params=21
+
+--- Config 29/36: entanglement=ring, layers=3, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=3800
+Step 0, Energy: -0.315528, LR: 1.00e-02
+Step 100, Energy: -4.483850, LR: 1.00e-02
+Step 200, Energy: -4.512897, LR: 1.00e-02
+Step 300, Energy: -4.531766, LR: 1.00e-02
+Step 400, Energy: -4.534556, LR: 1.00e-02
+Step 500, Energy: -4.535398, LR: 1.00e-02
+  Trial 2/2, seed=3801
+Step 0, Energy: 0.351929, LR: 1.00e-02
+Step 100, Energy: -4.487116, LR: 1.00e-02
+Step 200, Energy: -4.563819, LR: 1.00e-02
+Step 300, Energy: -4.630033, LR: 1.00e-02
+Step 400, Energy: -4.647996, LR: 1.00e-02
+Step 500, Energy: -4.651992, LR: 1.00e-02
+Best for config 29: val_energy=-4.653924, num_params=24
+
+--- Config 30/36: entanglement=brick, layers=3, single_qubit_gates=['ry'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=3900
+Step 0, Energy: 1.049721, LR: 1.00e-02
+Step 100, Energy: -4.361566, LR: 1.00e-02
+Step 200, Energy: -4.403544, LR: 1.00e-02
+Step 300, Energy: -4.403671, LR: 1.00e-02
+Step 400, Energy: -4.403671, LR: 1.00e-02
+Step 500, Energy: -4.403671, LR: 1.00e-02
+  Trial 2/2, seed=3901
+Step 0, Energy: -2.632983, LR: 1.00e-02
+Step 100, Energy: -4.474905, LR: 1.00e-02
+Step 200, Energy: -4.513515, LR: 1.00e-02
+Step 300, Energy: -4.516847, LR: 1.00e-02
+Step 400, Energy: -4.520619, LR: 1.00e-02
+Step 500, Energy: -4.524689, LR: 1.00e-02
+Best for config 30: val_energy=-4.528525, num_params=17
+
+--- Config 31/36: entanglement=linear, layers=3, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=4000
+Step 0, Energy: 1.266621, LR: 1.00e-02
+Step 100, Energy: -3.536213, LR: 1.00e-02
+Step 200, Energy: -3.956219, LR: 1.00e-02
+Step 300, Energy: -3.974355, LR: 1.00e-02
+Step 400, Energy: -3.999487, LR: 1.00e-02
+Step 500, Energy: -4.580037, LR: 1.00e-02
+  Trial 2/2, seed=4001
+Step 0, Energy: 0.372271, LR: 1.00e-02
+Step 100, Energy: -3.912700, LR: 1.00e-02
+Step 200, Energy: -4.486424, LR: 1.00e-02
+Step 300, Energy: -4.758454, LR: 1.00e-02
+Step 400, Energy: -4.758608, LR: 1.00e-02
+Step 500, Energy: -4.758635, LR: 1.00e-02
+Best for config 31: val_energy=-4.758660, num_params=24
+
+--- Config 32/36: entanglement=ring, layers=3, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=4100
+Step 0, Energy: -1.454628, LR: 1.00e-02
+Step 100, Energy: -3.712168, LR: 1.00e-02
+Step 200, Energy: -3.924091, LR: 1.00e-02
+Step 300, Energy: -4.416141, LR: 1.00e-02
+Step 400, Energy: -4.665709, LR: 1.00e-02
+Step 500, Energy: -4.680230, LR: 1.00e-02
+  Trial 2/2, seed=4101
+Step 0, Energy: -0.009375, LR: 1.00e-02
+Step 100, Energy: -3.581166, LR: 1.00e-02
+Step 200, Energy: -4.200927, LR: 1.00e-02
+Step 300, Energy: -4.250731, LR: 1.00e-02
+Step 400, Energy: -4.349202, LR: 1.00e-02
+Step 500, Energy: -4.677077, LR: 1.00e-02
+Best for config 32: val_energy=-4.720434, num_params=24
+
+--- Config 33/36: entanglement=brick, layers=3, single_qubit_gates=['ry', 'rz'], two_qubit_gate=cnot ---
+  Trial 1/2, seed=4200
+Step 0, Energy: 1.084508, LR: 1.00e-02
+Step 100, Energy: -4.201674, LR: 1.00e-02
+Step 200, Energy: -4.638392, LR: 1.00e-02
+Step 300, Energy: -4.649941, LR: 1.00e-02
+Step 400, Energy: -4.650856, LR: 1.00e-02
+Step 500, Energy: -4.651547, LR: 1.00e-02
+  Trial 2/2, seed=4201
+Step 0, Energy: 0.430788, LR: 1.00e-02
+Step 100, Energy: -2.825797, LR: 1.00e-02
+Step 200, Energy: -4.506485, LR: 1.00e-02
+Step 300, Energy: -4.582528, LR: 1.00e-02
+Step 400, Energy: -4.642628, LR: 1.00e-02
+Step 500, Energy: -4.649124, LR: 1.00e-02
+Best for config 33: val_energy=-4.652054, num_params=24
+
+--- Config 34/36: entanglement=linear, layers=3, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=4300
+Step 0, Energy: 0.182052, LR: 1.00e-02
+Step 100, Energy: -4.617846, LR: 1.00e-02
+Step 200, Energy: -4.672870, LR: 1.00e-02
+Step 300, Energy: -4.750009, LR: 1.00e-02
+Step 400, Energy: -4.755886, LR: 1.00e-02
+Step 500, Energy: -4.756988, LR: 1.00e-02
+  Trial 2/2, seed=4301
+Step 0, Energy: -0.258653, LR: 1.00e-02
+Step 100, Energy: -4.590427, LR: 1.00e-02
+Step 200, Energy: -4.727568, LR: 1.00e-02
+Step 300, Energy: -4.740673, LR: 1.00e-02
+Step 400, Energy: -4.745067, LR: 1.00e-02
+Step 500, Energy: -4.748646, LR: 1.00e-02
+Best for config 34: val_energy=-4.757783, num_params=33
+
+--- Config 35/36: entanglement=ring, layers=3, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=4400
+Step 0, Energy: 0.716448, LR: 1.00e-02
+Step 100, Energy: -4.455880, LR: 1.00e-02
+Step 200, Energy: -4.560217, LR: 1.00e-02
+Step 300, Energy: -4.633018, LR: 1.00e-02
+Step 400, Energy: -4.649645, LR: 1.00e-02
+Step 500, Energy: -4.666823, LR: 1.00e-02
+  Trial 2/2, seed=4401
+Step 0, Energy: -0.602926, LR: 1.00e-02
+Step 100, Energy: -4.433992, LR: 1.00e-02
+Step 200, Energy: -4.538502, LR: 1.00e-02
+Step 300, Energy: -4.599336, LR: 1.00e-02
+Step 400, Energy: -4.680825, LR: 1.00e-02
+Step 500, Energy: -4.752717, LR: 1.00e-02
+Best for config 35: val_energy=-4.757086, num_params=36
+
+--- Config 36/36: entanglement=brick, layers=3, single_qubit_gates=['ry', 'rz'], two_qubit_gate=rzz ---
+  Trial 1/2, seed=4500
+Step 0, Energy: 1.601920, LR: 1.00e-02
+Step 100, Energy: -4.508744, LR: 1.00e-02
+Step 200, Energy: -4.577546, LR: 1.00e-02
+Step 300, Energy: -4.648351, LR: 1.00e-02
+Step 400, Energy: -4.655286, LR: 1.00e-02
+Step 500, Energy: -4.656402, LR: 1.00e-02
+  Trial 2/2, seed=4501
+Step 0, Energy: -0.034068, LR: 1.00e-02
+Step 100, Energy: -4.365033, LR: 1.00e-02
+Step 200, Energy: -4.579191, LR: 1.00e-02
+Step 300, Energy: -4.647393, LR: 1.00e-02
+Step 400, Energy: -4.656359, LR: 1.00e-02
+Step 500, Energy: -4.658220, LR: 1.00e-02
+Best for config 36: val_energy=-4.658732, num_params=29
+
+=== Ansatz Search Final Best ===
+Best config: entanglement=linear, layers=3, single_qubit_gates=['ry'], two_qubit_gate=cnot
+
+--- VQE Results ---
+val_energy        : -4.758714199066162
+exact_energy      : -4.75877
+energy_error      : 5.5800933838057176e-05
+num_params        : 12
+training_seconds  : 10.87
+actual_steps      : 600
+-------------------
+
+Report generated at: /Users/qianlong/tries/2026-03-10-auto-vqe/experiments/tfim/report_20260310_212802.md

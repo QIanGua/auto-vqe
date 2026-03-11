@@ -6,6 +6,10 @@ import logging
 import warnings
 import contextlib
 import io
+import uuid
+import json
+import subprocess
+from typing import Any, Dict, Optional
 
 # Import tensorcircuit once, but silence its optional-backend warnings and
 # Python SyntaxWarning noise that may appear on import under newer Python.
@@ -20,6 +24,115 @@ tc.set_backend("pytorch")
 
 
 from contextlib import contextmanager
+
+
+# ---------------------------------------------------------------------------
+# Helpers for structured experiment logging
+# ---------------------------------------------------------------------------
+
+def _infer_system_from_exp_dir(exp_dir: str) -> str:
+    """
+    Try to infer the physical / problem system name from the experiment path.
+    For this repo we assume pattern: .../experiments/<system>/...
+    """
+    parts = os.path.abspath(exp_dir).split(os.sep)
+    if "experiments" in parts:
+        idx = parts.index("experiments")
+        if idx + 1 < len(parts):
+            return parts[idx + 1]
+    return "unknown"
+
+
+def _find_git_root(start_dir: str) -> Optional[str]:
+    """
+    Walk upwards from start_dir until we find a .git directory, or return None.
+    """
+    cur = os.path.abspath(start_dir)
+    while True:
+        if os.path.isdir(os.path.join(cur, ".git")):
+            return cur
+        parent = os.path.dirname(cur)
+        if parent == cur:
+            return None
+        cur = parent
+
+
+def _get_git_diff(repo_root: Optional[str]) -> Optional[str]:
+    """
+    Capture the current uncommitted patch diff for lineage analysis.
+    If repo_root is None or git is unavailable, return None.
+    """
+    if repo_root is None:
+        return None
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", repo_root, "diff"],
+            stderr=subprocess.DEVNULL,
+        )
+        diff_text = out.decode("utf-8", errors="replace")
+        # Normalize empty diff to empty string instead of huge whitespace.
+        return diff_text if diff_text.strip() else ""
+    except Exception:
+        return None
+
+
+def _append_experiment_jsonl(exp_dir: str, record: Dict[str, Any]) -> None:
+    """
+    Append a single structured experiment record into results.jsonl
+    under the given experiment directory. Keeps TSV logs alongside
+    a machine-readable event stream.
+    """
+    path = os.path.join(exp_dir, "results.jsonl")
+    # Use utf-8 so that comments / summaries can contain non-ASCII if needed.
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False))
+        f.write("\n")
+
+
+def _estimate_two_qubit_gates(
+    ansatz_spec: Optional[Dict[str, Any]],
+    n_qubits: Optional[int],
+) -> Optional[int]:
+    """
+    Roughly estimate the number of two-qubit gates from the ansatz spec
+    and qubit count. This uses the same topology helpers as circuit_factory
+    so it stays consistent with how circuits are actually built.
+
+    支持两种 ansatz_spec 形式：
+      1) 旧版: 直接是 config dict，包含 "layers" / "entanglement"；
+      2) 标准化版: `AnsatzSpec.to_logging_dict()` 的结果，其中实际
+         config 嵌套在 ansatz_spec["config"] 下。
+    """
+    if ansatz_spec is None or n_qubits is None:
+        return None
+
+    # 兼容旧版与新版结构：优先从 "config" 中取实际 ansatz 配置。
+    cfg: Dict[str, Any]
+    if "config" in ansatz_spec and isinstance(ansatz_spec["config"], dict):
+        cfg = ansatz_spec["config"]  # 来自 AnsatzSpec.to_logging_dict()
+    else:
+        cfg = ansatz_spec
+
+    try:
+        # Local import to avoid any potential import-order surprises.
+        from core.circuit_factory import get_pairs  # type: ignore
+    except Exception:
+        return None
+
+    layers = int(cfg.get("layers", 1))
+    entanglement = cfg.get("entanglement", "linear")
+
+    total = 0
+    if entanglement == "brick":
+        # brick has layer-dependent pairs
+        from core.circuit_factory import _brick_pairs  # type: ignore
+
+        for l in range(layers):
+            total += len(_brick_pairs(n_qubits, l))
+    else:
+        pairs = get_pairs(entanglement, n_qubits)
+        total = layers * len(pairs)
+    return total
 
 @contextmanager
 def experiment_guard(run_py_path, logger=None):
@@ -71,8 +184,8 @@ def vqe_train(
     create_circuit_fn,
     compute_energy_fn,
     n_qubits,
-    exact_energy,
-    num_params,
+    exact_energy=None,
+    num_params=0,
     max_steps=1000,
     lr=0.01,
     logger=None,
@@ -157,15 +270,41 @@ def vqe_train(
     end_time = time.time()
     final_energy = compute_energy_fn(params).item()
 
+    # 只在需要时才使用 exact_energy 计算误差，避免在训练内环中依赖“答案”
+    if exact_energy is not None:
+        energy_error = abs(final_energy - exact_energy)
+    else:
+        energy_error = None
+
+    optimizer_spec: Dict[str, Any] = {
+        "optimizer": "Adam",
+        "lr": lr,
+        "max_steps": max_steps,
+        "early_stop_window": early_stop_window,
+        "early_stop_threshold": early_stop_threshold,
+        "grad_clip_norm": grad_clip_norm,
+        "scheduler": {
+            "type": "ReduceLROnPlateau",
+            "mode": "min",
+            "patience": 100,
+            "factor": 0.5,
+            "min_lr": 1e-5,
+        },
+    }
+
     return {
         "val_energy": final_energy,
         "exact_energy": exact_energy,
-        "energy_error": abs(final_energy - exact_energy),
+        "energy_error": energy_error,
         "num_params": num_params,
         "training_seconds": round(end_time - start_time, 2),
         "actual_steps": actual_steps,
         "final_params": params.detach(),
         "energy_history": energy_history,
+        # Extra metadata for structured experiment DB
+        "seed": seed,
+        "n_qubits": n_qubits,
+        "optimizer_spec": optimizer_spec,
     }
 
 def print_results(results, logger=None):
@@ -199,71 +338,154 @@ def summarize_config(config):
         return ", ".join(parts)
     return str(config)
 
+from core.controller import SearchController
+
 def ansatz_search(
     env,
     make_create_circuit_fn,
     config_list,
     exp_dir,
     base_exp_name,
+    lr=0.01,
     trials_per_config=3,
     max_steps=1000,
-    lr=0.01,
-    logger=None,
+    sub_dir: str | None = None,
+    logger: logging.Logger | None = None,
+    controller: Optional[SearchController] = None,
 ):
     """
     在给定的 ansatz 配置列表上进行自动搜索。
 
     - env: QuantumEnvironment 子类实例，提供 n_qubits, exact_energy, compute_energy(c)。
-    - make_create_circuit_fn(config) -> (create_circuit_fn, num_params)
+    - make_create_circuit_fn(config) -> (create_circuit_fn, num_params)  或
+      返回一个带 `create_circuit` / `num_params` / `to_logging_dict()` 的
+      对象（例如 Baseline Zoo 中的 `AnsatzSpec`）。
     - config_list: 离散的 ansatz 配置列表（dict 或任意可打印对象）。
+    - controller: 可选的 SearchController 实例，用于管理预算和停止规则。
 
     Ranking 规则：
       1. 先按 val_energy 从小到大排序；
       2. 若能量差异在 1e-4 以内，则按 num_params 从少到多排序（奥卡姆剃刀）。
     """
+    if sub_dir:
+        exp_dir = os.path.join(exp_dir, sub_dir)
+        os.makedirs(exp_dir, exist_ok=True)
+
     if logger is None:
         # 默认在搜索级别只用一个简单的 logger
         log_path = os.path.join(exp_dir, f"{base_exp_name}_search_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
         logger = setup_logger(log_path)
 
+    if controller is None:
+        controller = SearchController(logger=logger)
+
     logger.info(f"=== Ansatz Search: {base_exp_name} ===")
     logger.info(f"Target Energy: {env.exact_energy:.6f}")
 
-    best_overall = None
-    best_overall_config = None
+    best_overall: Optional[Dict[str, Any]] = None
+    best_overall_config: Any = None
+    best_overall_spec: Optional[Dict[str, Any]] = None
 
     for idx, config in enumerate(config_list):
-        cfg_str = summarize_config(config)
-        logger.info(f"\n--- Config {idx+1}/{len(config_list)}: {cfg_str} ---")
+        if not controller.should_continue():
+            logger.info(f"Search interrupted by controller: {controller.stop_reason}")
+            break
 
-        create_circuit_fn, num_params = make_create_circuit_fn(config)
+        cfg_str = summarize_config(config)
+        logger.info(f"\n--- Config {idx+idx}/{len(config_list)}: {cfg_str} ---")
+
+        ansatz_obj = make_create_circuit_fn(config)
+        # 支持两种返回形式：旧版 (create_circuit_fn, num_params) 或
+        # Baseline Zoo 风格的 AnsatzSpec。
+        if isinstance(ansatz_obj, tuple) and len(ansatz_obj) == 2:
+            create_circuit_fn, num_params = ansatz_obj
+            # 为了在 results.jsonl 中统一，构造一份轻量级 ansatz_spec 字典。
+            if isinstance(config, dict):
+                cfg_dict: Dict[str, Any] = dict(config)
+            else:
+                cfg_dict = {"raw_config": str(config)}
+            ansatz_spec_dict = {
+                "name": base_exp_name,
+                "family": "multidim",
+                "env_name": getattr(env, "name", "unknown"),
+                "n_qubits": getattr(env, "n_qubits", None),
+                "num_params": num_params,
+                "config": cfg_dict,
+                "metadata": {
+                    "search": "multidim",
+                },
+            }
+        else:
+            create_circuit_fn = getattr(ansatz_obj, "create_circuit")
+            num_params = int(getattr(ansatz_obj, "num_params"))
+            if hasattr(ansatz_obj, "to_logging_dict"):
+                ansatz_spec_dict = ansatz_obj.to_logging_dict()  # type: ignore[attr-defined]
+            else:
+                if isinstance(config, dict):
+                    cfg_dict = dict(config)
+                else:
+                    cfg_dict = {"raw_config": str(config)}
+                ansatz_spec_dict = {
+                    "name": base_exp_name,
+                    "family": "multidim",
+                    "env_name": getattr(env, "name", "unknown"),
+                    "n_qubits": getattr(env, "n_qubits", None),
+                    "num_params": num_params,
+                    "config": cfg_dict,
+                    "metadata": {
+                        "search": "multidim",
+                    },
+                }
 
         def compute_energy_fn(params):
             c, _ = create_circuit_fn(params)
             return env.compute_energy(c)
 
         best_for_cfg = None
+        
+        # Internal failure counter for this specific proposal
+        proposal_failures = 0
 
         for t in range(trials_per_config):
+            if not controller.should_continue():
+                break
+
             seed = 1000 + idx * 100 + t
             logger.info(f"  Trial {t+1}/{trials_per_config}, seed={seed}")
 
-            results = vqe_train(
-                create_circuit_fn=create_circuit_fn,
-                compute_energy_fn=compute_energy_fn,
-                n_qubits=env.n_qubits,
-                exact_energy=env.exact_energy,
-                num_params=num_params,
-                max_steps=max_steps,
-                lr=lr,
-                logger=logger,
-                seed=seed,
-            )
+            try:
+                # 训练内环不直接使用 exact_energy，只返回能量本身
+                results = vqe_train(
+                    create_circuit_fn=create_circuit_fn,
+                    compute_energy_fn=compute_energy_fn,
+                    n_qubits=env.n_qubits,
+                    exact_energy=None,
+                    num_params=num_params,
+                    max_steps=max_steps,
+                    lr=lr,
+                    logger=logger,
+                    seed=seed,
+                )
+                
+                controller.report_result(results)
 
-            if (best_for_cfg is None) or (results["val_energy"] < best_for_cfg["val_energy"]):
-                best_for_cfg = results
+                if (best_for_cfg is None) or (results["val_energy"] < best_for_cfg["val_energy"]):
+                    best_for_cfg = results
+
+            except Exception as e:
+                proposal_failures += 1
+                logger.error(f"  Trial {t+1} failed: {e}")
+                controller.report_result({}, is_failure=True)
+                if proposal_failures >= 3:
+                    logger.warning(f"Too many failures for this proposal ({proposal_failures}), skipping.")
+                    break
 
         if best_for_cfg is not None:
+            # 在配置级别（外层）再使用 exact_energy 做评估，而不是在训练内环中
+            best_for_cfg["exact_energy"] = env.exact_energy
+            best_for_cfg["energy_error"] = abs(
+                best_for_cfg["val_energy"] - env.exact_energy
+            )
             comment = f"config: {cfg_str}"
             log_results(exp_dir, f"{base_exp_name}_cfg{idx}", best_for_cfg, comment=comment)
             logger.info(f"Best for config {idx+1}: val_energy={best_for_cfg['val_energy']:.6f}, num_params={best_for_cfg['num_params']}")
@@ -284,27 +506,52 @@ def ansatz_search(
         if is_better(best_for_cfg, best_overall):
             best_overall = best_for_cfg
             best_overall_config = config
+            best_overall_spec = ansatz_spec_dict
 
     logger.info("\n=== Ansatz Search Final Best ===")
-    logger.info(f"Best config: {summarize_config(best_overall_config)}")
-    print_results(best_overall, logger=logger)
+    if best_overall_config and best_overall is not None and best_overall_spec is not None:
+        logger.info(f"Best config: {summarize_config(best_overall_config)}")
+        print_results(best_overall, logger=logger)
+        
+        # 重新构造 create_circuit_fn（开销极小），确保与 best_overall_spec 对齐。
+        best_ansatz_obj = make_create_circuit_fn(best_overall_config)
+        if isinstance(best_ansatz_obj, tuple) and len(best_ansatz_obj) == 2:
+            best_create_fn = best_ansatz_obj[0]
+        else:
+            best_create_fn = getattr(best_ansatz_obj, "create_circuit")
 
-    report_path = generate_report(
-        exp_dir,
-        f"{base_exp_name}_Best_Report",
-        best_overall,
-        make_create_circuit_fn(best_overall_config)[0],
-        comment=f"Best config: {summarize_config(best_overall_config)}",
-    )
-    logger.info(f"Report generated at: {report_path}")
+        report_path = generate_report(
+            exp_dir,
+            f"{base_exp_name}_Best_Report",
+            best_overall,
+            best_create_fn,
+            comment=f"Best config: {summarize_config(best_overall_config)}",
+            # 使用与 Baseline Zoo 对齐的 ansatz_spec 字典写入 results.jsonl
+            ansatz_spec=best_overall_spec,
+        )
+        logger.info(f"Report generated at: {report_path}")
 
-    return {
-        "best_config": best_overall_config,
-        "best_results": best_overall,
-        "report_path": report_path,
-    }
+        return {
+            "best_config": best_overall_config,
+            "best_results": best_overall,
+            "report_path": report_path,
+            "ansatz_spec": best_overall_spec,
+        }
+    else:
+        logger.error("No valid results found in search.")
+        return {}
 
-def generate_report(exp_dir, exp_name, results, create_circuit_fn, comment=""):
+def generate_report(
+    exp_dir,
+    exp_name,
+    results,
+    create_circuit_fn,
+    comment: str = "",
+    ansatz_spec: Optional[Dict[str, Any]] = None,
+    decision: str = "keep",
+    parent_experiment: Optional[str] = None,
+    change_summary: str = "",
+):
     """
     自动生成实验报告：Markdown 分析 + 线路图像可视化
     """
@@ -386,6 +633,7 @@ def generate_report(exp_dir, exp_name, results, create_circuit_fn, comment=""):
             pass
 
     # 2. 保存完整线路 JSON（仅用于后续分析，不在报告中展示）
+    circuit_json_path = os.path.join(exp_dir, f"circuit_{timestamp}.json")
     try:
         c, _ = create_circuit_fn(results["final_params"])
         raw_data = c.to_json()
@@ -396,7 +644,7 @@ def generate_report(exp_dir, exp_name, results, create_circuit_fn, comment=""):
         else:
             circuit_data = raw_data
 
-        with open(os.path.join(exp_dir, f"circuit_{timestamp}.json"), "w") as f:
+        with open(circuit_json_path, "w") as f:
             f.write(json.dumps(circuit_data, indent=2))
     except Exception:
         # JSON 导出失败不会影响报告生成
@@ -445,5 +693,59 @@ def generate_report(exp_dir, exp_name, results, create_circuit_fn, comment=""):
 """
     with open(report_path, "w") as f:
         f.write(report_content)
-    
+
+    # 4. 追加结构化实验记录到 results.jsonl
+    try:
+        system = _infer_system_from_exp_dir(exp_dir)
+        git_root = _find_git_root(exp_dir)
+        git_diff = _get_git_diff(git_root)
+
+        metrics: Dict[str, Any] = {
+            "val_energy": results.get("val_energy"),
+            "exact_energy": results.get("exact_energy"),
+            "energy_error": results.get("energy_error"),
+            "num_params": results.get("num_params"),
+            "depth": None,  # 可在后续版本用真实线路深度替换
+            "two_qubit_gates": _estimate_two_qubit_gates(
+                ansatz_spec, results.get("n_qubits")
+            ),
+            "runtime_sec": results.get("training_seconds"),
+            "actual_steps": results.get("actual_steps"),
+        }
+
+        artifact_paths: Dict[str, Any] = {
+            "report_md": report_path,
+            "circuit_png": circuit_img_path if has_image else None,
+            "convergence_png": convergence_img_path if has_convergence else None,
+            "circuit_json": circuit_json_path,
+        }
+
+        experiment_record: Dict[str, Any] = {
+            "experiment_id": str(uuid.uuid4()),
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "system": system,
+            "exp_name": exp_name,
+            "seed": results.get("seed"),
+            "n_qubits": results.get("n_qubits"),
+            "ansatz_spec": ansatz_spec,
+            "optimizer_spec": results.get("optimizer_spec"),
+            "measurement_spec": {
+                "observable": "Hamiltonian",
+                "n_qubits": results.get("n_qubits"),
+                "exact_energy": results.get("exact_energy"),
+            },
+            "metrics": metrics,
+            "decision": decision,
+            "parent_experiment": parent_experiment,
+            "change_summary": change_summary,
+            "comment": comment,
+            "git_diff": git_diff,
+            "artifact_paths": artifact_paths,
+        }
+
+        _append_experiment_jsonl(exp_dir, experiment_record)
+    except Exception:
+        # 结构化记录永远不应阻塞正常报告生成流程
+        pass
+
     return report_path

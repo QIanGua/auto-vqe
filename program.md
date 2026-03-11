@@ -10,9 +10,17 @@
   这些文件代表真实物理世界的规则，**绝对禁止修改**。
 - **可变领域 (The Conjecture)**  
   - `experiments/tfim/run.py`、`experiments/lih/run.py` 中的 ansatz 构造函数 `create_circuit`。  
-  - `experiments/*/search.py` 中的 ansatz 搜索配置。  
+  - `experiments/*/ga_search.py` 中的 GA 搜索配置。  
+  - `core/circuit_factory.py` 中的通用线路工厂（`build_ansatz(config, n_qubits)`）。  
   你可以修改：
-    - `create_circuit` 中的量子门组合（例如引入 $R_z$, $CZ$, $Mølmer-Sørensen$ 门，或者改变纠缠层拓扑）。
+    - 搜索配置 `config dict`（推荐方式，不需要写 Python 线路代码）：
+      - `layers`: 层数
+      - `single_qubit_gates`: 门类型 (`["ry"]`, `["ry", "rz"]` 等)
+      - `two_qubit_gate`: 纠缠门 (`cnot`, `cz`, `rzz`, `rxx_ryy_rzz`)
+      - `entanglement`: 拓扑 (`linear`, `ring`, `brick`, `full`)
+      - `init_state`: 初始态 (`zero`, `hadamard`, `hf`)
+      - `param_strategy`: 参数策略 (`independent`, `tied`)
+    - 或直接修改 `create_circuit` 中的量子门组合（传统方式）。
     - 优化器策略（例如添加动量 Momentum、使用 Adam 优化逻辑，或者调节学习率）。
 
 ## 奥卡姆剃刀原则 (Simplicity Criterion)
@@ -43,8 +51,23 @@
 4. **参数策略 (Parameter Strategy)**: 独立参数, 参数绑定 (Tying), QAOA 式对称绑定
 5. **初始化 (Initialization)**: 随机, Hadamard 基, Hartree-Fock 初始态
 
-### 推荐搜索顺序
-1. 先用 `search.py` 扫描不同层数，确定最小有效深度
+### 搜索方式
+
+**方式一（推荐）: 结构化 config 搜索**
+通过 `core/circuit_factory.py` 的 `generate_config_grid()` 定义搜索维度，自动生成所有组合并评估：
+```python
+from core.circuit_factory import generate_config_grid
+dimensions = {
+    "layers": [1, 2, 3],
+    "single_qubit_gates": [["ry"], ["ry", "rz"]],
+    "two_qubit_gate": ["cnot", "rzz"],
+    "entanglement": ["linear", "ring", "brick"],
+}
+config_list = generate_config_grid(dimensions)
+```
+
+**方式二: 手动搜索顺序 (基于 GA 搜索脚本)**
+1. 先用 `ga_search.py` 扫描不同层数，确定最小有效深度
 2. 在最小深度上尝试不同的门类型组合
 3. 对最优门类型进行拓扑优化
 4. 最后尝试参数绑定策略以进一步精简
@@ -71,4 +94,15 @@
    - 如果新方案 Pareto 占优于当前最优，则保留代码 (`keep`)。  
    - 如果能量变差或系统崩溃，则回退代码 (`discard`)。
    - 可使用 `experiment_guard` 上下文管理器自动保护 `run.py`。
-7. **永不停歇**，直到人类介入。
+7. **预算与停止规则 (The Budget & Stopping Rules)**
+   - **预算约束**:
+     - 每轮最大运行次数 (Max Runs): 默认 50 次。
+     - 最大 Wall-clock 时间: 设置硬性时间限制。
+   - **自动停止/切换**:
+     - 如果连续 10 次 proposal 没有改善，自动触发策略切换 (Switch Proposer)。
+     - 如果连续 3 次运行时/语法失败，自动缩小搜索空间。
+     - 若 Improvement 小于阈值 (1e-4) 且复杂度显著增加，则自动 discard。
+   - **稳定性评估**:
+     - 如果某类 ansatz 在多个 seed 上方差过大，标记为 unstable 并审慎评估。
+
+Agent 已从“无限试错脚本”进化为“预算受限的科研决策器”。

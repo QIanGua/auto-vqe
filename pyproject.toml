@@ -13,4 +13,7 @@ dependencies = [
     "qiskit-aer>=0.17.2",
     "qiskit-ibm-runtime>=0.44.1",
     "pylatexenc>=2.10",
+    "pyscf>=2.12.1",
+    "openfermion>=1.7.1",
+    "openfermionpyscf>=0.5",
 ]
