@@ -315,7 +315,11 @@ def count_params(config: dict, n_qubits: int) -> int:
 
     total_sq = layers * sq_per_layer
 
-    if param_strategy == "tied":
+    if param_strategy == "translational":
+        # $O(1)$ per layer: each layer only takes (number of SQ gate types) + (params per TQ pair type)
+        sq_params_per_layer = len(sq_gates)
+        return layers * (sq_params_per_layer + tq_param_per_pair)
+    elif param_strategy == "tied":
         # 参数共享: 只有 1 层独立参数
         if entanglement == "brick":
             # tied + brick: 取第一层的参数量 (保守处理)
@@ -403,34 +407,71 @@ def build_ansatz(
             # 若 tied 策略，每层都从 idx=0 开始（复用同一组参数）
             if param_strategy == "tied":
                 idx = 0
+            
+            # 若 translational 策略，记录本层首个参数索引
+            if param_strategy == "translational":
+                layer_start_idx = idx
 
             # ---- 单比特旋转门 ----
-            for i in range(n_qubits):
-                for g in sq_gates:
+            for g_idx, g in enumerate(sq_gates):
+                # translational 策略：同一层的所有该类型单量子比特门共享一个参数
+                if param_strategy == "translational":
+                    shared_theta = params[layer_start_idx + g_idx]
+
+                for i in range(n_qubits):
                     gate_fn = getattr(c, g)
-                    gate_fn(i, theta=params[idx])
-                    idx += 1
+                    if param_strategy == "translational":
+                        gate_fn(i, theta=shared_theta)
+                    else:
+                        gate_fn(i, theta=params[idx])
+                        idx += 1
+            
+            if param_strategy == "translational":
+                # 单比特门消耗了 len(sq_gates) 个共享参数
+                idx = layer_start_idx + len(sq_gates)
 
             # ---- 纠缠门 ----
             pairs = get_pairs(entanglement, n_qubits, layer_idx=layer)
             for i, j in pairs:
+                # 记录如果不是 translational, tq 需要的参数量
+                tq_params_used = 0
+
                 if tq_gate == "cnot":
                     c.cnot(i, j)
                 elif tq_gate == "cz":
                     c.cz(i, j)
                 elif tq_gate == "rzz":
-                    c.rzz(i, j, theta=params[idx])
-                    idx += 1
+                    theta = params[idx] if param_strategy == "translational" else params[idx + tq_params_used]
+                    c.rzz(i, j, theta=theta)
+                    tq_params_used += 1
                 elif tq_gate == "rxx_ryy_rzz":
-                    c.rxx(i, j, theta=params[idx])
-                    idx += 1
-                    c.ryy(i, j, theta=params[idx])
-                    idx += 1
-                    c.rzz(i, j, theta=params[idx])
-                    idx += 1
+                    theta_x = params[idx] if param_strategy == "translational" else params[idx + tq_params_used]
+                    c.rxx(i, j, theta=theta_x)
+                    tq_params_used += 1
+                    
+                    theta_y = params[idx + 1] if param_strategy == "translational" else params[idx + tq_params_used]
+                    c.ryy(i, j, theta=theta_y)
+                    tq_params_used += 1
+                    
+                    theta_z = params[idx + 2] if param_strategy == "translational" else params[idx + tq_params_used]
+                    c.rzz(i, j, theta=theta_z)
+                    tq_params_used += 1
+                
+                # 非平移对称时，每一个纠缠对都需要消耗独立参数，因此立即推进 idx
+                if param_strategy != "translational":
+                    idx += tq_params_used
+            
+            # 平移对称下，所有对复用同一组双比特门参数，每一层仅消耗一次
+            if param_strategy == "translational":
+                idx += _count_two_qubit_params(tq_gate)
 
         # 实际使用的参数量
-        actual_idx = idx if param_strategy != "tied" else num_params
+        if param_strategy == "tied":
+            actual_idx = num_params
+        elif param_strategy == "translational":
+            actual_idx = idx
+        else:
+            actual_idx = idx
         return c, actual_idx
 
     return create_circuit, num_params
@@ -463,7 +504,7 @@ SEARCH_DIMENSIONS = {
     "two_qubit_gate": ["cnot", "cz", "rzz", "rxx_ryy_rzz"],
     "entanglement": ["linear", "ring", "brick", "full"],
     "init_state": ["zero", "hadamard", "hf"],
-    "param_strategy": ["independent", "tied"],
+    "param_strategy": ["independent", "tied", "translational"],
 }
 
 def get_random_config(custom_dimensions: dict | None = None) -> dict:

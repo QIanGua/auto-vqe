@@ -22,7 +22,7 @@ def run_100q_mps():
         "single_qubit_gates": ["ry", "rx"],
         "two_qubit_gate": "rzz",
         "entanglement": "linear",
-        "param_strategy": "tied", 
+        "param_strategy": "translational", 
         "use_mps": True
     }
     
@@ -34,20 +34,32 @@ def run_100q_mps():
         return env.compute_energy(c)
         
     print(f"Starting 100-qubit TFIM VQE with MPS backend...")
-    print(f"Total optimizable parameters: {num_params}")
+    print(f"Total optimizable parameters: {num_params} (Using Translational Invariance O(1))")
     
     import torch
     import time
 
-    params = torch.randn(num_params, dtype=torch.float32)
+    from core.scipy_optimizer import scipy_vqe_train
 
-    start = time.time()
-    with torch.no_grad():
-        energy = compute_energy_fn(params)
+    log_path = os.path.join(os.path.dirname(__file__), "vqe_100q.log")
+    logger = setup_logger(log_path)
     
-    print("\nForward pass eval on 100 qubits completed successfully!")
-    print(f"Computed Energy: {energy.item():.4f}")
-    print(f"Time Taken: {time.time() - start:.2f} seconds")
+    # 5. Run Scipy VQE training
+    # Only 9 parameters! Gradient-free optimization will execute O(100) fast forward passes 
+    start = time.time()
+    results = scipy_vqe_train(
+        create_circuit_fn=create_circuit_fn,
+        compute_energy_fn=compute_energy_fn,
+        n_qubits=n_qubits,
+        num_params=num_params,
+        max_steps=100, 
+        logger=logger,
+        method="COBYLA"
+    )
+    
+    print("\nOptimization completed successfully!")
+    print(f"Time Taken to optimize 100 qubits (100 evals): {time.time() - start:.2f} seconds")
+    print_results(results)
 
 if __name__ == "__main__":
     run_100q_mps()
