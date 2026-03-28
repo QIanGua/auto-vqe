@@ -5,6 +5,8 @@ import torch
 import numpy as np
 from core.engine import generate_report, vqe_train, setup_logger
 from core.schemas import AnsatzSpec
+from baselines.uccsd import build_ansatz
+from experiments.lih.env import ENV
 
 def test_vqe_train_legacy_wrapper(tmp_path):
     # Test the new wrapper around optimize_parameters
@@ -81,3 +83,46 @@ def test_generate_report_minimal(tmp_path):
     
     assert os.path.exists(report_path)
     assert os.path.exists(os.path.join(exp_dir, "results.jsonl"))
+
+
+def test_generate_report_uccsd_uses_tensorcircuit_diagram_pipeline(tmp_path):
+    exp_dir = str(tmp_path)
+    spec = build_ansatz(
+        ENV,
+        {
+            "init_state": "hf",
+            "hf_qubits": [0, 1],
+            "occupied_orbitals": [0, 1],
+            "virtual_orbitals": [2, 3],
+            "layers": 1,
+            "include_singles": True,
+            "include_doubles": True,
+            "mapping": "jordan_wigner",
+            "trotter_order": 1,
+        },
+    )
+
+    results = {
+        "val_energy": -7.86,
+        "exact_energy": -7.862129,
+        "energy_error": 0.002129,
+        "num_params": spec.num_params,
+        "runtime_sec": 0.1,
+        "training_seconds": 0.1,
+        "actual_steps": 5,
+        "final_params": np.zeros(spec.num_params, dtype=np.float32),
+        "energy_history": [-7.0, -7.5, -7.8, -7.85, -7.86],
+        "n_qubits": ENV.n_qubits,
+    }
+
+    report_path = generate_report(
+        exp_dir,
+        "LiH_UCCSD_Test",
+        results,
+        spec.create_circuit,
+        ansatz_spec=spec.to_logging_dict(),
+    )
+
+    assert os.path.exists(report_path)
+    pngs = [name for name in os.listdir(exp_dir) if name.startswith("circuit_") and name.endswith(".png")]
+    assert pngs

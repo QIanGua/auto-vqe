@@ -134,7 +134,12 @@ def prepare_experiment_dir(base_dir: str, exp_name: str) -> str:
     import datetime
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     folder_name = f"{timestamp}_{exp_name}"
-    exp_path = os.path.join(base_dir, folder_name)
+    session_root = os.environ.get("AGENT_VQE_SESSION_DIR")
+    if session_root:
+        exp_base_dir = session_root
+    else:
+        exp_base_dir = base_dir
+    exp_path = os.path.join(exp_base_dir, folder_name)
     os.makedirs(exp_path, exist_ok=True)
     return exp_path
 
@@ -199,6 +204,23 @@ def _estimate_two_qubit_gates(
         pairs = get_pairs(entanglement, n_qubits)
         total = layers * len(pairs)
     return total
+
+
+def _save_tensorcircuit_circuit_png(circuit: Any, output_path: str) -> None:
+    """
+    Save a tensorcircuit circuit to PNG using the repo's lightweight drawer.
+    """
+    import json
+
+    from core.circuit_drawer import render_circuit_diagram
+
+    raw_data = circuit.to_json()
+    if isinstance(raw_data, str):
+        circuit_data = json.loads(raw_data)
+    else:
+        circuit_data = raw_data
+
+    render_circuit_diagram(circuit_data, output_path=output_path, simplify=True)
 
 @contextmanager
 def experiment_guard(run_py_path, logger=None):
@@ -340,6 +362,8 @@ def optimize_parameters(
     
     return {
         "val_energy": final_energy,
+        "exact_energy": env.exact_energy if hasattr(env, "exact_energy") else None,
+        "energy_error": abs(final_energy - env.exact_energy) if hasattr(env, "exact_energy") else None,
         "num_params": num_params,
         "runtime_sec": end_time - start_time,
         "actual_steps": actual_steps,
@@ -469,7 +493,8 @@ def vqe_train(
     final_energy = compute_energy_fn(params).item()
     return {
         "val_energy": final_energy,
-        "energy_error": abs(final_energy - exact_energy) if exact_energy else None,
+        "exact_energy": exact_energy,
+        "energy_error": abs(final_energy - exact_energy) if exact_energy is not None else None,
         "num_params": num_params,
         "training_seconds": time.time() - start_time,
         "actual_steps": actual_steps,
@@ -722,6 +747,8 @@ def ansatz_search(
             logger.warning(f"No successful trials for config {idx+1}")
 
         def is_better(new, old):
+            if new is None:
+                return False
             if old is None:
                 return True
             # 先看能量
@@ -804,45 +831,9 @@ def generate_report(
     has_image = False
     
     try:
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        plt.close('all') # 确保清理之前的绘图对象
-        
         c, _ = create_circuit_fn(results['final_params'])
-        
-        # 1. 优先使用 tensorcircuit 的 draw 方法
-        try:
-            fig = c.draw(output='mpl')
-            # 移除标题以便保持标准的论文风格，或者保留一个简单的标注
-            fig.savefig(circuit_img_path, dpi=300, bbox_inches='tight')
-            plt.close(fig)
-            has_image = True
-        except Exception as e:
-            # 2. 如果标准绘图失败，尝试一个极简的散点分布图作为兜底
-            fig, ax = plt.subplots(figsize=(10, 4))
-            data = c.to_json()
-            if isinstance(data, str):
-                import json
-                data = json.loads(data)
-            
-            x = range(len(data))
-            y = [d['qubits'][0] for d in data if 'qubits' in d and len(d['qubits']) > 0]
-            labels = [d['name'] for d in data]
-            
-            if y:
-                ax.scatter(x[:len(y)], y, marker='s', s=100, color='skyblue')
-                for i, txt in enumerate(labels[:30]): 
-                    if i < len(y):
-                        ax.annotate(txt, (x[i], y[i]), fontsize=8)
-            
-            ax.set_title(f"Quantum Circuit: {exp_name} (Simple Fallback)")
-            ax.set_xlabel("Gate Index")
-            ax.set_ylabel("Qubit Index")
-            plt.savefig(circuit_img_path, dpi=300)
-            plt.close(fig)
-            has_image = True
-            print(f"Standard draw failed, used fallback. Error: {e}")
+        _save_tensorcircuit_circuit_png(c, circuit_img_path)
+        has_image = True
     except Exception as e:
         print(f"Image generation failed: {e}")
 
@@ -923,8 +914,8 @@ def generate_report(
 | 指标 | 数值 |
 | :--- | :--- |
 | **最终能量** | {results['val_energy']:.8f} |
-| **精确能量** | {results.get('exact_energy') or 0.0:.8f} |
-| **能量误差** | {(results.get('energy_error') or 0.0):.8e} |
+| **精确能量** | {results.get('exact_energy') if results.get('exact_energy') is not None else 'N/A'} |
+| **能量误差** | {results.get('energy_error') if results.get('energy_error') is not None else 'N/A'} |
 | **参数量** | {results['num_params']} |
 | **实际步数** | {actual_steps} |
 | **耗时** | {results.get('training_seconds', results.get('runtime_sec', 'N/A'))} s |

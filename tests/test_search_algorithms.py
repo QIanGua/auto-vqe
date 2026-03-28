@@ -3,8 +3,9 @@ import numpy as np
 import torch
 import os
 import shutil
+import json
 from core.search_algorithms import GASearchStrategy
-from core.engine import GridSearchStrategy
+from core.engine import GridSearchStrategy, ansatz_search
 from core.controller import SearchController
 
 class MockEnv:
@@ -79,3 +80,69 @@ def test_grid_search_strategy(exp_dir):
     result = strategy.run()
     assert "best_results" in result
     assert result["best_results"]["val_energy"] == -0.5
+
+def test_grid_search_skips_failed_config_after_success(exp_dir, monkeypatch):
+    env = MockEnv()
+    config_list = [
+        {"n_layers": 1, "rotation": "rx"},
+        {"n_layers": 2, "rotation": "ry"},
+    ]
+    calls = {"count": 0}
+
+    def fake_vqe_train(**kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            return {
+                "val_energy": -0.5,
+                "num_params": 2,
+                "final_params": [0.1, 0.2],
+                "energy_history": [],
+                "training_seconds": 0.0,
+                "actual_steps": 1,
+                "converged": False,
+                "two_qubit_gate_count": 0,
+            }
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("core.engine.vqe_train", fake_vqe_train)
+    monkeypatch.setattr("core.engine.log_results", lambda *args, **kwargs: None)
+
+    result = ansatz_search(
+        env=env,
+        make_create_circuit_fn=mock_make_circuit_fn,
+        config_list=config_list,
+        exp_dir=exp_dir,
+        base_exp_name="GridFailureRecovery",
+        trials_per_config=1,
+        max_steps=5,
+    )
+
+    assert result["best_config"] == config_list[0]
+    assert result["best_results"]["val_energy"] == -0.5
+
+def test_lih_ga_search_writes_plain_best_config(tmp_path, monkeypatch):
+    from experiments.lih.ga import search as lih_ga_search
+
+    expected_config = {
+        "init_state": "hf",
+        "layers": 2,
+        "single_qubit_gates": ["ry", "rz"],
+        "two_qubit_gate": "rzz",
+        "entanglement": "linear",
+    }
+    wrapped_result = {
+        "best_config": expected_config,
+        "best_results": {"val_energy": -1.23, "num_params": 6},
+        "report_path": "/tmp/mock_report.md",
+    }
+
+    monkeypatch.setattr(lih_ga_search, "GASearchStrategy", lambda *args, **kwargs: type("DummyStrategy", (), {"run": lambda self: wrapped_result})())
+    monkeypatch.setattr("core.engine.prepare_experiment_dir", lambda *args, **kwargs: str(tmp_path / "run"))
+    monkeypatch.setattr(lih_ga_search, "__file__", str(tmp_path / "ga" / "search.py"))
+
+    result = lih_ga_search.run_ga_search()
+
+    assert result == wrapped_result
+    with open(tmp_path / "ga" / "best_config_ga.json", "r") as f:
+        persisted = json.load(f)
+    assert persisted == expected_config
