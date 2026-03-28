@@ -148,7 +148,7 @@ For intelligent exploration over complex, multi-dimensional ansatz spaces using 
 uv run python experiments/tfim/ga_search.py
 
 # LiH: evolutionary search over initialization, layers, and gate sets
-uv run python experiments/lih/ga_search.py
+uv run python experiments/lih/ga/search.py
 ```
 
 The best found architecture is automatically saved to **`ga/best_config_ga.json`** in the same directory. Subsequently, `run.py` will prioritize loading this file for validation.
@@ -164,6 +164,35 @@ You can ask an AI Agent to take over the research loop with a high-level prompt:
 
 For comprehensive analysis of specific ansatz dimensions (e.g., layers vs topology):
 The findings from multi-dimensional search experiments (as documented in the analysis reports in the **`multidim/`** folder) identify the most efficient configurations. These optimal "Ockham's Razor" configurations are saved as **`multidim/best_config_multidim.json`**.
+
+```bash
+# LiH: exhaustive scan over a structured ansatz grid
+uv run python experiments/lih/multidim/search.py
+```
+
+For a resumable outer-loop benchmark that sticks to a single strategy for the entire run:
+
+```bash
+# LiH agent loop with fixed GA strategy
+uv run python core/research_driver.py --dir experiments/lih --strategy ga --target 1e-6 --max 100
+
+# LiH agent loop with fixed MultiDim strategy
+uv run python core/research_driver.py --dir experiments/lih --strategy multidim --target 1e-6 --max 100
+```
+
+For long-running background execution, you can launch the same command with `nohup`:
+
+```bash
+nohup uv run python core/research_driver.py --dir experiments/lih --strategy ga --target 1e-6 --max 100 >/dev/null 2>&1 &
+```
+
+Each long-running outer-loop session is automatically grouped under a dedicated folder such as `experiments/lih/autoresearch_runs/<timestamp>_<strategy>_autoresearch/`, which contains:
+
+- `driver.log`
+- `autoresearch.jsonl`
+- `autoresearch.md`
+- per-iteration logs under `iterations/`
+- all search and verification artifacts created during that session
 
 ### Run Automated Multi-Strategy Search (The Orchestrator)
 
@@ -309,7 +338,7 @@ uv run python experiments/lih/run.py
 uv run python experiments/tfim/ga_search.py
 
 # LiH: 在初始态、层数、量子门组合等维度进行演化
-uv run python experiments/lih/ga_search.py
+uv run python experiments/lih/ga/search.py
 ```
 
 最优配置会自动持久化为该目录下的 **`ga/best_config_ga.json`**。
@@ -324,6 +353,32 @@ uv run python experiments/lih/ga_search.py
 ### 运行多维网格搜索 (Multi-Dimensional Search)
 
 用于对特定维度进行穷举分析。通过该策略发现的高效极简配置（遵循奥卡姆剃刀原则）会保存为 **`multidim/best_config_multidim.json`**。
+
+```bash
+# LiH: 在统一策略目录下运行 MultiDim 搜索
+uv run python experiments/lih/multidim/search.py
+```
+
+若要启动可续跑的外层 Agent loop，请显式固定一种策略，避免在同一条长跑任务中混用：
+
+```bash
+uv run python core/research_driver.py --dir experiments/lih --strategy ga --target 1e-6 --max 100
+uv run python core/research_driver.py --dir experiments/lih --strategy multidim --target 1e-6 --max 100
+```
+
+如果要在后台长期运行，可以直接用 `nohup` 启动同样的命令：
+
+```bash
+nohup uv run python core/research_driver.py --dir experiments/lih --strategy ga --target 1e-6 --max 100 >/dev/null 2>&1 &
+```
+
+每次长跑实验都会自动创建一个独立目录，例如 `experiments/lih/autoresearch_runs/<timestamp>_<strategy>_autoresearch/`，并将以下内容统一收纳进去：
+
+- `driver.log`
+- `autoresearch.jsonl`
+- `autoresearch.md`
+- `iterations/` 下的逐轮日志
+- 本次 session 产生的搜索与验证产物
 
 ### 运行多策略自动搜索 (Auto-Search Orchestration)
 

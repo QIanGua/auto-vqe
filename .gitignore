@@ -9,6 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .env
+.claude/
+**/.DS_Store
 
 # Experiment artifacts (logs, reports, plots, raw circuits, audits)
 **/*.log
@@ -19,4 +21,7 @@ wheels/
 **/circuit_*.json
 **/*.patch
 **/audit/
-**/[0-9]*_*/  # Matches timestamped dirs like 20260311_125637_...
+**/[0-9]*_*/
+**/.current_autoresearch_*
+**/autoresearch_runs/
+experiments/lih/mindquantum_data/

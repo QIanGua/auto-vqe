@@ -8,9 +8,7 @@ LiH 多维网格搜索 (Multi-Dimensional Grid Search)
 
 import os
 import sys
-import json
 
-# 将项目根目录加入 sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
 from core.engine import ansatz_search  # type: ignore
@@ -23,21 +21,12 @@ HF_QUBITS = [0, 1]
 
 
 def make_lih_circuit_fn(config: dict):
-    """
-    为 LiH 构造 (create_circuit_fn, num_params)。
-    自动注入 HF 初始态所需的 hf_qubits。
-    """
     if config.get("init_state") == "hf" and "hf_qubits" not in config:
         config = {**config, "hf_qubits": HF_QUBITS}
     return build_ansatz(config, N_QUBITS)
 
 
 def run_multidim_search():
-    """
-    在多维配置网格上进行穷举搜索，并将最优配置写入：
-    - experiments/lih/multidim/best_config_multidim.json
-    """
-    # 适中的搜索空间：兼顾表达力与可计算性
     dimensions = {
         "init_state": ["zero", "hf"],
         "layers": [1, 2, 3, 4],
@@ -48,7 +37,10 @@ def run_multidim_search():
 
     config_list = generate_config_grid(dimensions)
 
-    exp_dir = os.path.dirname(__file__)  # multidim 子目录
+    from core.engine import prepare_experiment_dir
+
+    strategy_dir = os.path.dirname(__file__)
+    exp_dir = prepare_experiment_dir(strategy_dir, "lih_multidim_search")
 
     result = ansatz_search(
         env=ENV,
@@ -59,12 +51,23 @@ def run_multidim_search():
         lr=0.05,
         trials_per_config=1,
         max_steps=600,
-        sub_dir=None,  # 直接在 multidim/ 下写日志和报告
+        sub_dir=None,
     )
+
+    best_config = result.get("best_config", {})
+    import json
+
+    session_root = os.environ.get("AGENT_VQE_SESSION_DIR")
+    if session_root:
+        target_path = os.path.join(session_root, "multidim", "best_config_multidim.json")
+    else:
+        target_path = os.path.join(strategy_dir, "best_config_multidim.json")
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+    with open(target_path, "w") as f:
+        json.dump(best_config, f, indent=4)
+    print(f"\nSynced best MultiDim config to: {target_path}")
 
     return result
 
-
 if __name__ == "__main__":
     run_multidim_search()
-

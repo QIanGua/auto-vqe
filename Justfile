@@ -25,7 +25,7 @@ tfim trials="3":
 
 # 启动 LiH 结构搜索 (GA)
 ga-lih:
-    uv run python experiments/lih/ga_search.py
+    uv run python experiments/lih/ga/search.py
 
 # 启动 TFIM 结构搜索 (GA)
 ga-tfim:
@@ -33,7 +33,7 @@ ga-tfim:
 
 # 启动 LiH 多维网格搜索 (MultiDim)
 multidim-lih:
-    uv run python experiments/lih/multidim/multidim_search.py
+    uv run python experiments/lih/multidim/search.py
 
 # 启动 TFIM 多维网格搜索 (MultiDim)
 multidim-tfim:

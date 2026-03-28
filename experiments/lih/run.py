@@ -1,6 +1,8 @@
 import sys
 import os
 import torch
+import argparse
+import json
 
 # 将项目根目录添加到路径中
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -20,9 +22,17 @@ from experiments.lih.geom_grid import BOND_LENGTHS_ANGSTROM
 N_QUBITS = ENV.n_qubits
 EXACT_ENERGY = ENV.exact_energy
 
-# ---- 配置加载逻辑 (优先级: GA > MultiDim > Fallback) ----
-def load_best_config():
+# ---- 配置加载逻辑 (优先级: CLI > GA > MultiDim > Fallback) ----
+def load_best_config(explicit_path=None):
     exp_dir = os.path.dirname(__file__)
+    if explicit_path:
+        if os.path.exists(explicit_path):
+            with open(explicit_path, "r") as f:
+                config = json.load(f)
+            print(f"Loaded EXPLICIT config from {explicit_path}")
+            return config, explicit_path
+        print(f"Warning: Explicit config path {explicit_path} not found. Falling back.")
+
     # 按照优先级尝试加载不同策略产出的最优配置
     configs_to_try = [
         "ga/best_config_ga.json", 
@@ -51,12 +61,13 @@ def load_best_config():
         "entanglement": "linear"
     }, "fallback_default"
 
-ANSATZ_CONFIG, CONFIG_PATH = load_best_config()
+DEFAULT_ANSATZ_CONFIG, DEFAULT_CONFIG_PATH = load_best_config()
+DEFAULT_CREATE_CIRCUIT, DEFAULT_NUM_PARAMS = build_ansatz(DEFAULT_ANSATZ_CONFIG, N_QUBITS)
 
-create_circuit, NUM_PARAMS = build_ansatz(ANSATZ_CONFIG, N_QUBITS)
-
-def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
+def run_experiment(trials=2, explicit_config_path=None): # LiH 耗时较长，Trial 改为 2
     from core.engine import prepare_experiment_dir
+    ansatz_config, config_path = load_best_config(explicit_config_path)
+    create_circuit, num_params = build_ansatz(ansatz_config, N_QUBITS)
     base_dir = os.path.dirname(__file__)
     exp_dir = prepare_experiment_dir(base_dir, "lih_vqe")
     
@@ -64,8 +75,8 @@ def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
     logger = setup_logger(log_path)
     logger.info(f"--- LiH Experiment Phase 10 ---")
     logger.info(f"Experiment Directory: {exp_dir}")
-    logger.info(f"Config Source: {CONFIG_PATH}")
-    logger.info(f"Config Content: {ANSATZ_CONFIG}")
+    logger.info(f"Config Source: {config_path}")
+    logger.info(f"Config Content: {ansatz_config}")
     logger.info(f"Target Energy: {EXACT_ENERGY:.6f}")
     
     best_results = None
@@ -84,7 +95,7 @@ def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
             compute_energy_fn=compute_energy_fn,
             n_qubits=N_QUBITS,
             exact_energy=EXACT_ENERGY,
-            num_params=NUM_PARAMS,
+            num_params=num_params,
             max_steps=800,
             lr=0.05,
             logger=logger
@@ -98,16 +109,17 @@ def run_experiment(trials=2): # LiH 耗时较长，Trial 改为 2
     print_results(best_results, logger=logger)
     
     # 记录到实验目录，并同步到实验根目录的汇总表
-    log_results(exp_dir, "LiH_Phase10", best_results, comment=f"Config: {ANSATZ_CONFIG}, source={CONFIG_PATH}", global_dir=base_dir)
+    log_results(exp_dir, "LiH_Phase10", best_results, comment=f"Config: {ansatz_config}, source={config_path}", global_dir=base_dir)
     report_path = generate_report(
         exp_dir,
         "LiH_Phase10_Report",
         best_results,
         create_circuit,
-        ansatz_spec=ANSATZ_CONFIG,
-        config_path=CONFIG_PATH,
+        ansatz_spec=ansatz_config,
+        config_path=config_path,
     )
     logger.info(f"Report generated at: {report_path}")
+    return best_results
 
 
 def run_geometry_scan(trials_per_R: int = 1, max_steps: int = 800, lr: float = 0.05):
@@ -122,9 +134,9 @@ def run_geometry_scan(trials_per_R: int = 1, max_steps: int = 800, lr: float = 0
     logger = setup_logger(log_path)
     logger.info(f"--- LiH Geometry Scan (structure transfer) ---")
     logger.info(f"Experiment Directory: {exp_dir}")
-    logger.info(f"Ansatz config: {ANSATZ_CONFIG}")
+    logger.info(f"Ansatz config: {DEFAULT_ANSATZ_CONFIG}")
     logger.info(f"--- LiH Geometry Scan (structure transfer) ---")
-    logger.info(f"Ansatz config: {ANSATZ_CONFIG}")
+    logger.info(f"Ansatz config: {DEFAULT_ANSATZ_CONFIG}")
 
     # 结果收集，用于后续画解离曲线
     scan_results = []
@@ -146,7 +158,7 @@ def run_geometry_scan(trials_per_R: int = 1, max_steps: int = 800, lr: float = 0
         overall_best_energy = float("inf")
 
         def compute_energy_fn(params):
-            c, _ = create_circuit(params)
+            c, _ = DEFAULT_CREATE_CIRCUIT(params)
             return env.compute_energy(c)
 
         for t in range(trials_per_R):
@@ -160,7 +172,7 @@ def run_geometry_scan(trials_per_R: int = 1, max_steps: int = 800, lr: float = 0
                 n_qubits=env.n_qubits,
                 # 用 active-space exact 评估 ansatz 误差
                 exact_energy=exact_active,
-                num_params=NUM_PARAMS,
+                num_params=DEFAULT_NUM_PARAMS,
                 max_steps=max_steps,
                 lr=lr,
                 logger=logger,
@@ -237,6 +249,11 @@ def run_geometry_scan(trials_per_R: int = 1, max_steps: int = 800, lr: float = 0
     return scan_results
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run LiH VQE experiment with config.")
+    parser.add_argument("--config", type=str, help="Path to explicit ansatz config JSON.")
+    parser.add_argument("--trials", type=int, default=2, help="Number of trials with different seeds.")
+    args = parser.parse_args()
+
     # 默认仍然保持原来的单点实验行为；如需扫描整条解离曲线，可以显式调用
     # run_geometry_scan()。
-    run_experiment()
+    run_experiment(trials=args.trials, explicit_config_path=args.config)
