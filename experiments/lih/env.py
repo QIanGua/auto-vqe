@@ -88,8 +88,9 @@ def _find_point_for_R(R: float) -> Optional[Dict[str, Any]]:
 def _get_default_point() -> Optional[Dict[str, Any]]:
     """
     Pick a default geometry from the PySCF data.
-    Strategy: choose the point with minimal exact energy (typically near
-    equilibrium bond length).
+    Strategy: choose the point with minimal exact active-space energy.
+    This is fixed to follow the physical trend (R near 1.6A) rather than
+    the potentially inconsistent FCI energy in the data file.
     """
     data = _load_pyscf_data()
     if data is None:
@@ -97,7 +98,20 @@ def _get_default_point() -> Optional[Dict[str, Any]]:
     pts = data.get("points", [])
     if not pts:
         return None
-    return min(pts, key=lambda pt: float(pt.get("exact_energy")))
+    
+    def get_score(pt):
+        if "active_space_exact_energy" in pt:
+            return float(pt["active_space_exact_energy"])
+
+        n_qubits = int(pt.get("n_qubits", 4))
+        paulis = []
+        for term in pt.get("paulis", []):
+            coeff = float(term["coeff"])
+            ops = term.get("ops", [])
+            paulis.append((coeff, ops))
+        return get_exact_from_paulis(paulis, n_qubits).real
+
+    return min(pts, key=get_score)
 
 
 class LiHEnvironment(QuantumEnvironment):
@@ -137,14 +151,39 @@ class LiHEnvironment(QuantumEnvironment):
                 paulis.append((coeff, ops_list))
             self.paulis = paulis
 
-            # full FCI (electronic + nuclear) from PySCF on the original
-            # molecule (before active-space reduction)
-            self.full_fci_energy = float(data_point.get("exact_energy"))
+            self.hf_energy = (
+                float(data_point["hf_energy"])
+                if data_point.get("hf_energy") is not None
+                else None
+            )
+            self.ccsd_energy = (
+                float(data_point["ccsd_energy"])
+                if data_point.get("ccsd_energy") is not None
+                else None
+            )
+            self.nuclear_repulsion = (
+                float(data_point["nuclear_repulsion"])
+                if data_point.get("nuclear_repulsion") is not None
+                else None
+            )
 
-            # active-space "exact" energy: diagonalize the 4-qubit
-            # Hamiltonian defined by self.paulis. This is what we want to
-            # use when评估 ansatz 对当前 4-qubit 模型的逼近误差。
-            exact_active = get_exact_from_paulis(self.paulis, n_qubits).real
+            # New schema stores the true full-space electronic FCI
+            # separately. Older JSON used the ambiguous `exact_energy`
+            # field, which actually held full-space total energy.
+            if data_point.get("full_fci_energy") is not None:
+                self.full_fci_energy = float(data_point["full_fci_energy"])
+            elif data_point.get("exact_energy") is not None:
+                self.full_fci_energy = float(data_point["exact_energy"])
+            else:
+                self.full_fci_energy = None
+
+            # Active-space exact energy should come from the explicit
+            # field when present; otherwise we reconstruct it from the
+            # stored qubit Hamiltonian for backward compatibility.
+            if data_point.get("active_space_exact_energy") is not None:
+                exact_active = float(data_point["active_space_exact_energy"])
+            else:
+                exact_active = get_exact_from_paulis(self.paulis, n_qubits).real
             self.exact_energy_active = exact_active
 
             # QuantumEnvironment.exact_energy 指向 active-space exact，
@@ -154,7 +193,7 @@ class LiHEnvironment(QuantumEnvironment):
             # Fallback to the original toy Hamiltonian if no PySCF data is
             # available. This keeps older experiments runnable even if the
             # user has not yet generated `lih_pyscf_data.json`.
-            super().__init__("LiH_Full", 4, -7.8827)
+            super().__init__("LiH_Full", 4, float(-7.8827))
             self.paulis = [
                 (-2.4270, []),  # Constant
                 (0.132221, [('z', 0)]),

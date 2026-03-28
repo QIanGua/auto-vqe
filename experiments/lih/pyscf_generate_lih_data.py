@@ -21,6 +21,8 @@ import os
 from dataclasses import asdict, dataclass
 from typing import Dict, List, Tuple
 
+import numpy as np
+
 try:
     from .geom_grid import BOND_LENGTHS_ANGSTROM
 except (ImportError, ValueError):
@@ -37,9 +39,40 @@ class PauliTerm:
 @dataclass
 class GeometryPoint:
     R: float  # bond length in Angstrom
-    exact_energy: float  # FCI + nuclear repulsion, in Hartree
+    hf_energy: float  # HF total energy, in Hartree
+    ccsd_energy: float | None  # CCSD total energy, in Hartree
+    full_fci_energy: float  # full-space FCI total energy, in Hartree
+    nuclear_repulsion: float  # nuclear repulsion energy, in Hartree
+    active_space_exact_energy: float  # exact ground energy of stored 4-qubit Hamiltonian
     n_qubits: int
     paulis: List[PauliTerm]
+
+
+def _get_exact_from_qubit_op(qubit_op, n_qubits: int) -> float:
+    """
+    Diagonalize the active-space qubit Hamiltonian and return its exact
+    ground-state energy.
+    """
+    X = np.array([[0, 1], [1, 0]], dtype=complex)
+    Y = np.array([[0, -1j], [1j, 0]], dtype=complex)
+    Z = np.array([[1, 0], [0, -1]], dtype=complex)
+    I = np.array([[1, 0], [0, 1]], dtype=complex)
+
+    pauli_map = {"X": X, "Y": Y, "Z": Z}
+    dim = 2**n_qubits
+    hamiltonian = np.zeros((dim, dim), dtype=complex)
+
+    for term, coeff in qubit_op.terms.items():
+        matrices = []
+        term_map = {idx: pauli for idx, pauli in term}
+        for qubit in range(n_qubits):
+            matrices.append(pauli_map.get(term_map.get(qubit), I))
+        term_matrix = matrices[0]
+        for matrix in matrices[1:]:
+            term_matrix = np.kron(term_matrix, matrix)
+        hamiltonian += coeff * term_matrix
+
+    return float(np.min(np.linalg.eigvalsh(hamiltonian)).real)
 
 
 def _qubit_op_to_paulis(qubit_op) -> List[PauliTerm]:
@@ -151,24 +184,22 @@ def generate_lih_points() -> Dict[str, GeometryPoint]:
         # Map the 4-qubit active-space Hamiltonian via Jordan–Wigner.
         qubit_h = jordan_wigner(molecular_h)
 
-        # For consistency with earlier code, we store the *full* FCI
-        # energy (electronic FCI + nuclear repulsion) as the reference.
-        # In an exact calculation, diagonalizing `qubit_h` would recover
-        # the same ground-state energy.
-        exact_energy = float(molecule.fci_energy + molecule.nuclear_repulsion)
-
-        pauli_terms = _qubit_op_to_paulis(qubit_h)
-
         # OpenFermion uses one qubit per spin-orbital; for our chosen
         # two-orbital active space this should be 4. `QubitOperator`
         # itself does not expose `n_qubits`, so we infer it via
         # `count_qubits`.
         n_qubits = int(count_qubits(qubit_h))
+        active_space_exact_energy = _get_exact_from_qubit_op(qubit_h, n_qubits)
+        pauli_terms = _qubit_op_to_paulis(qubit_h)
 
         key = f"{R:.3f}"
         points[key] = GeometryPoint(
             R=R,
-            exact_energy=exact_energy,
+            hf_energy=float(molecule.hf_energy),
+            ccsd_energy=float(molecule.ccsd_energy) if molecule.ccsd_energy is not None else None,
+            full_fci_energy=float(molecule.fci_energy),
+            nuclear_repulsion=float(molecule.nuclear_repulsion),
+            active_space_exact_energy=active_space_exact_energy,
             n_qubits=n_qubits,
             paulis=pauli_terms,
         )
@@ -186,7 +217,11 @@ def save_lih_data_json(path: str, points: Dict[str, GeometryPoint]) -> None:
             {
                 "key": key,
                 "R": pt.R,
-                "exact_energy": pt.exact_energy,
+                "hf_energy": pt.hf_energy,
+                "ccsd_energy": pt.ccsd_energy,
+                "full_fci_energy": pt.full_fci_energy,
+                "nuclear_repulsion": pt.nuclear_repulsion,
+                "active_space_exact_energy": pt.active_space_exact_energy,
                 "n_qubits": pt.n_qubits,
                 "paulis": [asdict(term) for term in pt.paulis],
             }

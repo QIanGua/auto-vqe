@@ -1,13 +1,13 @@
 """
 LiH Baseline / Benchmark Runner
 
-在一个固定、可解释的基线 Ansatz 上运行 VQE，用于和 GA / MultiDim 搜索结果做对比。
+在一个固定、可解释的 UCCSD baseline 上运行 VQE，用于和 GA / MultiDim
+搜索结果做对比。
 """
 
 import os
 import sys
 import json
-import datetime
 
 import torch
 
@@ -22,47 +22,53 @@ from baselines.uccsd import build_ansatz as build_uccsd
 N_QUBITS = ENV.n_qubits
 EXACT_ENERGY = ENV.exact_energy
 
-# --- 固定 Baseline 配置 (覆盖 UCCSD 默认设置以匹配历史 LiH 基线) ---
+# 固定 LiH baseline 配置。
+# 这里保留 HF 初始化，并使用显式 singles + doubles 的最小 UCCSD 骨架。
 BASELINE_CONFIG = {
     "init_state": "hf",
     "hf_qubits": [0, 1],
-    "layers": 2,
-    "single_qubit_gates": ["ry", "rz"],
-    "two_qubit_gate": "rzz",
-    "entanglement": "linear",
+    "occupied_orbitals": [0, 1],
+    "virtual_orbitals": [2, 3],
+    "layers": 1,
+    "include_singles": True,
+    "include_doubles": True,
+    "mapping": "jordan_wigner",
+    "trotter_order": 1,
 }
 
 
 def save_baseline_config(exp_dir: str, ansatz_spec_dict: dict):
     """
     将 baseline AnsatzSpec 以 JSON 形式持久化，便于后续分析和对照。
-
-    这里直接保存 `AnsatzSpec.to_logging_dict()` 的结果，以便离线分析时
-    能看到 family/name/config 等完整信息。
     """
     path = os.path.join(exp_dir, "baseline_config.json")
     with open(path, "w") as f:
         json.dump(ansatz_spec_dict, f, indent=4)
 
 
-def run_baseline(trials: int = 3):
+def run_baseline(trials: int = 5):
     """
-    在固定 Baseline 配置上运行多次 VQE，并记录最优结果。
+    在固定 UCCSD baseline 配置上运行多次 VQE，并记录最优结果。
     """
     from core.engine import prepare_experiment_dir
+
     base_dir = os.path.dirname(__file__)
-    exp_dir = prepare_experiment_dir(base_dir, "lih_baseline")
-    
-    # 使用 Baseline Zoo 中的 UCCSD 基线构造 ansatz，并持久化其结构化描述。
+    exp_dir = prepare_experiment_dir(base_dir, "lih_baseline_uccsd")
+
     uccsd_spec = build_uccsd(ENV, BASELINE_CONFIG)
     uccsd_spec_dict = uccsd_spec.to_logging_dict()
     save_baseline_config(exp_dir, uccsd_spec_dict)
 
     log_path = os.path.join(exp_dir, "experiment.log")
     logger = setup_logger(log_path)
-    logger.info("--- LiH Baseline Experiment ---")
+    logger.info("--- LiH UCCSD Baseline Experiment ---")
     logger.info(f"Baseline family: {uccsd_spec.family}, name: {uccsd_spec.name}")
     logger.info(f"Config: {uccsd_spec.config}")
+    logger.info(
+        "Excitations: %s singles + %s doubles",
+        uccsd_spec.metadata.get("singles_count"),
+        uccsd_spec.metadata.get("doubles_count"),
+    )
     logger.info(f"Target Energy: {EXACT_ENERGY:.6f}")
 
     create_circuit = uccsd_spec.create_circuit
@@ -77,7 +83,7 @@ def run_baseline(trials: int = 3):
 
     for i in range(trials):
         logger.info(f"\n--- Trial {i+1}/{trials} ---")
-        torch.manual_seed(100 + i)
+        torch.manual_seed(50 + i)
 
         results = vqe_train(
             create_circuit_fn=create_circuit,
@@ -85,8 +91,8 @@ def run_baseline(trials: int = 3):
             n_qubits=N_QUBITS,
             exact_energy=EXACT_ENERGY,
             num_params=num_params,
-            max_steps=800,
-            lr=0.05,
+            max_steps=1500,
+            lr=0.01,
             logger=logger,
         )
 
@@ -94,22 +100,20 @@ def run_baseline(trials: int = 3):
             overall_best_energy = results["val_energy"]
             best_results = results
 
-    logger.info("\n=== LiH Baseline Best ===")
+    logger.info("\n=== LiH UCCSD Baseline Best ===")
     print_results(best_results, logger=logger)
 
-    # 记录到 baseline 目录自己的 results.tsv
     log_results(
         exp_dir,
-        "LiH_Baseline",
+        "LiH_UCCSD_Baseline",
         best_results,
         comment=f"Baseline spec: {uccsd_spec_dict}",
     )
     report_path = generate_report(
         exp_dir,
-        "LiH_Baseline_Report",
+        "LiH_UCCSD_Baseline_Report",
         best_results,
         create_circuit,
-        # 在 results.jsonl 中记录统一的 AnsatzSpec 描述
         ansatz_spec=uccsd_spec_dict,
     )
     logger.info(f"Report generated at: {report_path}")

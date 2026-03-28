@@ -7,7 +7,11 @@
     {
       "key": "0.800",
       "R": 0.8,
-      "exact_energy": -5.649752788374347,
+      "hf_energy": -7.615770161235998,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.634167329324347,
+      "nuclear_repulsion": 1.98441454095,
+      "active_space_exact_energy": -7.615915762407984,
       "n_qubits": 4,
       "paulis": [
         {
@@ -421,7 +425,11 @@
     {
       "key": "1.000",
       "R": 1.0,
-      "exact_energy": -6.196928647271227,
+      "hf_energy": -7.767362135748564,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.784460280031227,
+      "nuclear_repulsion": 1.5875316327600002,
+      "active_space_exact_energy": -7.767496700950593,
       "n_qubits": 4,
       "paulis": [
         {
@@ -835,7 +843,11 @@
     {
       "key": "1.200",
       "R": 1.2,
-      "exact_energy": -6.529487825895918,
+      "hf_energy": -7.835615825556917,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.852430853195918,
+      "nuclear_repulsion": 1.3229430273,
+      "active_space_exact_energy": -7.8357668068709065,
       "n_qubits": 4,
       "paulis": [
         {
@@ -1249,7 +1261,11 @@
     {
       "key": "1.400",
       "R": 1.4,
-      "exact_energy": -6.744502486020014,
+      "hf_energy": -7.860538661021133,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.878453652277157,
+      "nuclear_repulsion": 1.133951166257143,
+      "active_space_exact_energy": -7.860729506442533,
       "n_qubits": 4,
       "paulis": [
         {
@@ -1663,7 +1679,11 @@
     {
       "key": "1.600",
       "R": 1.6,
-      "exact_energy": -6.890117108408502,
+      "hf_energy": -7.861864769808656,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.882324378883502,
+      "nuclear_repulsion": 0.992207270475,
+      "active_space_exact_energy": -7.86212883343859,
       "n_qubits": 4,
       "paulis": [
         {
@@ -2077,7 +2097,11 @@
     {
       "key": "1.800",
       "R": 1.8,
-      "exact_energy": -6.992562006791319,
+      "hf_energy": -7.850018697166809,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.874524024991319,
+      "nuclear_repulsion": 0.8819620182,
+      "active_space_exact_energy": -7.850412785691284,
       "n_qubits": 4,
       "paulis": [
         {
@@ -2491,7 +2515,11 @@
     {
       "key": "2.000",
       "R": 2.0,
-      "exact_energy": -7.067321956101484,
+      "hf_energy": -7.83090558463708,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.8610877724814845,
+      "nuclear_repulsion": 0.7937658163800001,
+      "active_space_exact_energy": -7.831533625289843,
       "n_qubits": 4,
       "paulis": [
         {
@@ -2905,7 +2933,11 @@
     {
       "key": "2.500",
       "R": 2.5,
-      "exact_energy": -7.188711230363703,
+      "hf_energy": -7.770873669221909,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.823723883467703,
+      "nuclear_repulsion": 0.6350126531040001,
+      "active_space_exact_energy": -7.773544133674273,
       "n_qubits": 4,
       "paulis": [
         {
@@ -3319,7 +3351,11 @@
     {
       "key": "3.000",
       "R": 3.0,
-      "exact_energy": -7.269665948582407,
+      "hf_energy": -7.710829900217226,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.7988431595024075,
+      "nuclear_repulsion": 0.52917721092,
+      "active_space_exact_energy": -7.726428140250515,
       "n_qubits": 4,
       "paulis": [
         {
@@ -3733,7 +3769,11 @@
     {
       "key": "4.000",
       "R": 4.0,
-      "exact_energy": -7.387395270525383,
+      "hf_energy": -7.6249756301313285,
+      "ccsd_energy": null,
+      "full_fci_energy": -7.784278178715383,
+      "nuclear_repulsion": 0.39688290819000005,
+      "active_space_exact_energy": -7.749393694524732,
       "n_qubits": 4,
       "paulis": [
         {
