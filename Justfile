@@ -63,13 +63,27 @@ test-all:
 benchmark:
     PYTHONDONTWRITEBYTECODE=1 uv run python tests/benchmark_mapping.py
 
-# 清理实验产生的可再生产物与缓存，保留手工整理的 reports
-clean:
-    find experiments -type f \( -name "*.png" -o -name "*.jsonl" -o -name "*.tsv" -o -name "*.log" -o -name "*.patch" -o -name "report_*.md" -o -name "circuit_*.json" -o -name "run.json" -o -name "config_snapshot.json" -o -name "index.jsonl" \) -delete
-    find experiments -type d -name "[0-9]*_*" -exec rm -rf {} +
-    find experiments -type d -name "audit" -exec rm -rf {} +
-    find experiments -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".ipynb_checkpoints" \) -exec rm -rf {} +
-    find experiments -type f \( -name ".DS_Store" -o -name "*.pyc" -o -name "*.pyo" -o -name "*.pyd" \) -delete
-    find experiments -type d -path "*/artifacts/runs" -exec rm -rf {} +
-    find experiments -type d -path "*/artifacts/cache" -exec rm -rf {} +
-    find experiments -type f -path "*/artifacts/state/current_autoresearch_*" -delete
+# --- 清理与维护 ---
+
+# 清理 Python 编译缓存和系统垃圾 (全项目范围)
+clean-py:
+    @echo "Cleaning Python cache files..."
+    @find . -type d \( -name "__pycache__" -o -name ".pytest_cache" -o -name ".ipynb_checkpoints" -o -name ".mypy_cache" -o -name ".ruff_cache" \) -exec rm -rf {} +
+    @find . -type f \( -name ".DS_Store" -o -name "*.pyc" -o -name "*.pyo" -o -name "*.pyd" -o -name ".coverage" -o -name "coverage.xml" \) -delete
+    @# 如果安装了 pyclean，也可以备选运行: pyclean . --debris
+    @echo "Python cache cleaned."
+
+# 清理实验产生的临时物与实验记录
+clean-experiments:
+    @echo "Cleaning experimental data and logs..."
+    @find experiments -type f \( -name "*.png" -o -name "*.jsonl" -o -name "*.tsv" -o -name "*.log" -o -name "*.patch" -o -name "report_*.md" -o -name "circuit_*.json" -o -name "run.json" -o -name "config_snapshot.json" -o -name "index.jsonl" \) -delete
+    @find experiments -type d -name "[0-9]*_*" -exec rm -rf {} +
+    @find experiments -type d -name "audit" -exec rm -rf {} +
+    @find experiments -type d -path "*/artifacts/runs" -exec rm -rf {} +
+    @find experiments -type d -path "*/artifacts/cache" -exec rm -rf {} +
+    @find experiments -type f -path "*/artifacts/state/current_autoresearch_*" -delete
+    @rm -rf tmp_test_research_driver_session
+    @echo "Experimental data cleaned."
+
+# 合并所有清理任务
+clean: clean-py clean-experiments
