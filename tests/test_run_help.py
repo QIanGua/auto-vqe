@@ -50,6 +50,12 @@ def test_molecular_generate_help_stays_cli_only():
     assert "pyscf" not in result.stderr.lower()
 
 
+def test_render_report_help_runs_as_script():
+    result = _run_help("core/evaluator/render_report.py")
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+
+
 def test_tfim_search_help_stays_cli_only():
     result = _run_help("experiments/tfim/run.py", "search")
     assert result.returncode == 0, result.stderr

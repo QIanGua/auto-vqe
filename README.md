@@ -281,6 +281,20 @@ CLI-only smoke:
 uv run python core/molecular/generate.py --list
 ```
 
+Regenerate report assets for an existing run:
+
+```bash
+uv run python core/evaluator/render_report.py --run-dir experiments/lih/artifacts/runs/<timestamp>_lih_vqe
+uv run python core/evaluator/render_report.py --run-dir experiments/lih/artifacts/runs/<timestamp>_lih_vqe --markdown-only
+uv run python core/evaluator/render_report.py --run-dir experiments/lih/artifacts/runs/<timestamp>_lih_vqe --recompute-if-missing
+```
+
+CLI-only smoke:
+
+```bash
+uv run python core/evaluator/render_report.py --help
+```
+
 Run tests:
 
 ```bash

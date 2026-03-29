@@ -13,6 +13,21 @@ from core.evaluator.logging_utils import append_event_jsonl
 from core.representation.compiler import _brick_pairs, get_pairs
 
 
+def _json_ready_value(value: Any) -> Any:
+    if isinstance(value, torch.Tensor):
+        return _json_ready_value(value.detach().cpu().tolist())
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes, dict)):
+        try:
+            return _json_ready_value(value.tolist())
+        except Exception:
+            pass
+    if isinstance(value, dict):
+        return {str(key): _json_ready_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_ready_value(item) for item in value]
+    return value
+
+
 def _infer_system_from_exp_dir(exp_dir: str) -> str:
     parts = os.path.abspath(exp_dir).split(os.sep)
     if "experiments" in parts:
@@ -76,6 +91,26 @@ def _save_git_diff_artifact(exp_dir: str, diff_text: str) -> str:
     with open(patch_path, "w", encoding="utf-8") as f:
         f.write(diff_text)
     return os.path.join("audit", "git_diff.patch")
+
+
+def _save_report_context(exp_dir: str, results: Dict[str, Any]) -> str:
+    context_path = os.path.join(exp_dir, "report_context.json")
+    payload = {
+        "final_params": _json_ready_value(results.get("final_params")),
+        "energy_history": _json_ready_value(results.get("energy_history", [])),
+    }
+    with open(context_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    return context_path
+
+
+def load_report_context(exp_dir: str) -> Dict[str, Any]:
+    context_path = os.path.join(exp_dir, "report_context.json")
+    if not os.path.exists(context_path):
+        return {}
+    with open(context_path, "r", encoding="utf-8") as f:
+        payload = json.load(f)
+    return payload if isinstance(payload, dict) else {}
 
 
 def _get_runtime_env() -> Dict[str, Any]:
@@ -220,6 +255,7 @@ def generate_report(
         "circuit_png": circuit_img_path if has_image else None,
         "convergence_png": convergence_img_path if has_convergence else None,
         "circuit_json": circuit_json_path if render_assets else None,
+        "report_context": _save_report_context(exp_dir, results),
     }
 
     if ansatz_spec is not None:
