@@ -13,6 +13,19 @@ HF_QUBITS = [0, 1]
 RUNS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "artifacts", "runs")
 
 
+def prepare_experiment_dir(*args, **kwargs):
+    from core.evaluator.api import prepare_experiment_dir as _prepare_experiment_dir
+
+    return _prepare_experiment_dir(*args, **kwargs)
+
+
+class GASearchStrategy:
+    def __new__(cls, *args, **kwargs):
+        from core.generator.ga import GASearchStrategy as _GASearchStrategy
+
+        return _GASearchStrategy(*args, **kwargs)
+
+
 def make_lih_circuit_fn(config):
     from core.representation.compiler import build_ansatz
     from experiments.lih.env import ENV
@@ -24,8 +37,6 @@ def make_lih_circuit_fn(config):
 
 
 def run_ga_search():
-    from core.evaluator.api import prepare_experiment_dir
-    from core.generator.ga import GASearchStrategy
     from experiments.lih.env import ENV
 
     dimensions = {

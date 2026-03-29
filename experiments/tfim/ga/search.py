@@ -9,6 +9,20 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
+
+def prepare_experiment_dir(*args, **kwargs):
+    from core.evaluator.api import prepare_experiment_dir as _prepare_experiment_dir
+
+    return _prepare_experiment_dir(*args, **kwargs)
+
+
+class GASearchStrategy:
+    def __new__(cls, *args, **kwargs):
+        from core.generator.ga import GASearchStrategy as _GASearchStrategy
+
+        return _GASearchStrategy(*args, **kwargs)
+
+
 def make_tfim_circuit_fn(config):
     from core.representation.compiler import build_ansatz
     from experiments.tfim.env import ENV
@@ -16,9 +30,8 @@ def make_tfim_circuit_fn(config):
     n_qubits = ENV.n_qubits
     return build_ansatz(config, n_qubits)
 
+
 def run_ga_search():
-    from core.evaluator.api import prepare_experiment_dir
-    from core.generator.ga import GASearchStrategy
     from experiments.tfim.env import ENV
 
     # 定义搜索空间的范围
