@@ -31,3 +31,17 @@ def test_tfim_run_help_stays_cli_only():
     assert "usage:" in result.stdout.lower()
     assert "tensorcircuit" not in result.stderr.lower()
     assert "qiskit" not in result.stderr.lower()
+
+
+def test_research_runtime_help_runs_as_script():
+    result = _run_help("core/research/runtime.py")
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+
+
+def test_molecular_generate_help_stays_cli_only():
+    result = _run_help("core/molecular/generate.py")
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+    assert "openfermion" not in result.stderr.lower()
+    assert "pyscf" not in result.stderr.lower()

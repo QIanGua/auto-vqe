@@ -11,6 +11,7 @@ Agent-VQE is a configurable framework for automated ansatz search in VQE workflo
   - `core/representation/`: config-to-circuit compilation and structural edits
   - `core/evaluator/`: training, reporting, logging, experiment folders
   - `core/generator/`: GA, grid, ADAPT, and strategy interfaces
+  - `core/molecular/`: reusable molecular Hamiltonian builders, registry, loader, and CLI
   - `core/orchestration/`: controller and multi-strategy orchestration
   - `core/research/`: resumable Agent runtime for outer-loop research
   - `core/warmstart/`: parameter/config mapping for structure changes
@@ -34,6 +35,7 @@ core/
   foundation/
   generator/
   model/
+  molecular/
   orchestration/
   rendering/
   representation/
@@ -96,6 +98,37 @@ Use this when you want the project to keep session memory, resume across runs, a
 uv run python core/research/runtime.py --dir experiments/lih --strategy ga --target 1e-6 --max 100
 uv run python core/research/runtime.py --dir experiments/lih --strategy multidim --target 1e-6 --max 100
 uv run python core/research/runtime.py --dir experiments/tfim --strategy ga --target 1e-6 --max 50
+```
+
+### 5. Generate molecular Hamiltonian datasets from the shared core layer
+
+Use this when you want PySCF/OpenFermion-generated Hamiltonian data without writing a system-specific generation script from scratch.
+
+List registered systems:
+
+```bash
+uv run python core/molecular/generate.py --list
+```
+
+Generate datasets with the built-in presets:
+
+```bash
+uv run python core/molecular/generate.py --system lih
+uv run python core/molecular/generate.py --system h2
+uv run python core/molecular/generate.py --system beh2
+```
+
+Override the scan grid when needed:
+
+```bash
+uv run python core/molecular/generate.py --system lih --grid 1.0,1.2,1.4,1.6
+uv run python core/molecular/generate.py --system h2 --grid 0.5,0.74,1.0 --out artifacts/molecular/h2_custom.json
+```
+
+The default output path is:
+
+```text
+artifacts/molecular/<system>_pyscf_data.json
 ```
 
 ## How To Use The Agent
@@ -165,6 +198,13 @@ Run Agent runtime:
 uv run python core/research/runtime.py --dir experiments/lih --strategy ga --target 1e-6 --max 100
 ```
 
+Run molecular dataset generation:
+
+```bash
+uv run python core/molecular/generate.py --system lih
+uv run python core/molecular/generate.py --system h2 --grid 0.5,0.74,1.0
+```
+
 Run tests:
 
 ```bash
@@ -188,6 +228,10 @@ Normal experiment runs are written into timestamped folders created by `prepare_
 
 In addition, `log_results()` appends a lightweight summary table to `experiments/<system>/results.tsv`.
 
+Generated molecular Hamiltonian datasets now default to:
+
+- `artifacts/molecular/<system>_pyscf_data.json`
+
 Outer-loop autoresearch sessions are grouped under:
 
 - `experiments/<system>/artifacts/runs/autoresearch/<timestamp>_<strategy>_autoresearch/`
@@ -205,6 +249,10 @@ Structured Agent memory currently lives in:
 ## Core components
 
 - `core/foundation/base_env.py`: immutable quantum-environment base abstraction
+- `core/molecular/builders.py`: generic molecular builder spec + geometry factories
+- `core/molecular/presets.py`: built-in `H2` / `LiH` / `BeH2` presets
+- `core/molecular/registry.py`: shared molecular builder registry
+- `core/molecular/generate.py`: CLI entrypoint for dataset generation
 - `core/representation/compiler.py`: build ansatz callables from structured configs
 - `core/generator/ga.py`: GA-based structural search
 - `core/generator/grid.py`: grid-search strategy wrapper
@@ -237,6 +285,7 @@ just test-all
 Notable coverage areas:
 
 - schemas and typed models
+- molecular builder/registry/CLI helpers
 - warm-start mapping
 - GA/grid search behavior
 - orchestration and promotion logic
@@ -249,6 +298,7 @@ Notable coverage areas:
 - `Plan.md`: current project status and roadmap
 - `program.md`: operating rules for agent-driven research
 - `doc/agent_runtime_guide.md`: how the current Agent runtime works and how to run it
+- `doc/molecular_hamiltonian_guide.md`: shared molecular builder and dataset generation guide
 - `doc/logging_spec.md`: current logging schema
 - `doc/evaluation_protocol.md`: comparison and budget guidelines
 - `doc/orchestration_protocol.md`: orchestration contract

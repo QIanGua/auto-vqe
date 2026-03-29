@@ -1,46 +1,30 @@
-import numpy as np
-import sys
 import os
-import json
-from typing import Any, Dict, List, Tuple, Optional
+import sys
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+import numpy as np
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
 from core.foundation.base_env import QuantumEnvironment
+from core.molecular.loader import (
+    find_point_for_coordinate,
+    load_molecular_hamiltonian_data,
+    point_to_pauli_list,
+    select_lowest_exact_point,
+)
+from core.molecular.pauli import get_exact_from_paulis as _core_get_exact_from_paulis
+from core.molecular.schema import MolecularHamiltonianData, MolecularHamiltonianPoint
 
 
 def get_exact_from_paulis(paulis, n_qubits):
-    X = np.array([[0, 1], [1, 0]])
-    Y = np.array([[0, -1j], [1j, 0]])
-    Z = np.array([[1, 0], [0, -1]])
-    I = np.array([[1, 0], [0, 1]])
-
-    def tensor_op(ops_list):
-        res = 1
-        current_ops = {idx: op for op, idx in ops_list}
-        for i in range(n_qubits):
-            op_type = current_ops.get(i, 'i')
-            if op_type == 'x': op = X
-            elif op_type == 'y': op = Y
-            elif op_type == 'z': op = Z
-            else: op = I
-            res = np.kron(res, op)
-        return res
-
-    H = np.zeros((2**n_qubits, 2**n_qubits), dtype=complex)
-    for coeff, ops in paulis:
-        if not ops:
-            H += coeff * np.eye(2**n_qubits)
-        else:
-            H += coeff * tensor_op(ops)
-            
-    eigenvalues = np.linalg.eigvalsh(H)
-    return np.min(eigenvalues)
+    return _core_get_exact_from_paulis(paulis, n_qubits)
 
 
-_PYS_CF_DATA_CACHE: Optional[Dict[str, Any]] = None
+_PYS_CF_DATA_CACHE: Optional[Union[Dict[str, Any], MolecularHamiltonianData]] = None
 
 
-def _load_pyscf_data() -> Optional[Dict[str, Any]]:
+def _load_pyscf_data() -> Optional[Union[Dict[str, Any], MolecularHamiltonianData]]:
     """
     Try to load pre-generated LiH data from PySCF / OpenFermion.
 
@@ -55,13 +39,14 @@ def _load_pyscf_data() -> Optional[Dict[str, Any]]:
     if not os.path.exists(data_path):
         return None
 
-    with open(data_path, "r") as f:
-        data = json.load(f)
+    data = load_molecular_hamiltonian_data(data_path)
     _PYS_CF_DATA_CACHE = data
     return data
 
 
-def _find_point_for_R(R: float) -> Optional[Dict[str, Any]]:
+def _find_point_for_R(
+    R: float,
+) -> Optional[Union[Dict[str, Any], MolecularHamiltonianPoint]]:
     """
     Given a bond length R (Angstrom), find the closest entry in the
     pre-generated PySCF data, if available.
@@ -69,23 +54,17 @@ def _find_point_for_R(R: float) -> Optional[Dict[str, Any]]:
     data = _load_pyscf_data()
     if data is None:
         return None
+
+    if isinstance(data, MolecularHamiltonianData):
+        return find_point_for_coordinate(data, axis=data.coordinate_axis, value=R)
+
     pts = data.get("points", [])
     if not pts:
         return None
-
-    # Find the point with minimal |R_i - R|
-    best = None
-    best_dist = float("inf")
-    for pt in pts:
-        R_i = float(pt.get("R"))
-        d = abs(R_i - R)
-        if d < best_dist:
-            best_dist = d
-            best = pt
-    return best
+    return min(pts, key=lambda pt: abs(float(pt.get("R")) - R))
 
 
-def _get_default_point() -> Optional[Dict[str, Any]]:
+def _get_default_point() -> Optional[Union[Dict[str, Any], MolecularHamiltonianPoint]]:
     """
     Pick a default geometry from the PySCF data.
     Strategy: choose the point with minimal exact active-space energy.
@@ -95,10 +74,14 @@ def _get_default_point() -> Optional[Dict[str, Any]]:
     data = _load_pyscf_data()
     if data is None:
         return None
+
+    if isinstance(data, MolecularHamiltonianData):
+        return select_lowest_exact_point(data)
+
     pts = data.get("points", [])
     if not pts:
         return None
-    
+
     def get_score(pt):
         if "active_space_exact_energy" in pt:
             return float(pt["active_space_exact_energy"])
@@ -106,12 +89,59 @@ def _get_default_point() -> Optional[Dict[str, Any]]:
         n_qubits = int(pt.get("n_qubits", 4))
         paulis = []
         for term in pt.get("paulis", []):
-            coeff = float(term["coeff"])
-            ops = term.get("ops", [])
-            paulis.append((coeff, ops))
-        return get_exact_from_paulis(paulis, n_qubits).real
+            paulis.append((float(term["coeff"]), term.get("ops", [])))
+        return float(get_exact_from_paulis(paulis, n_qubits).real)
 
     return min(pts, key=get_score)
+
+
+def _extract_coordinate(
+    point: Union[Dict[str, Any], MolecularHamiltonianPoint],
+    axis: str,
+) -> Any:
+    if isinstance(point, MolecularHamiltonianPoint):
+        return point.coordinates.get(axis, "unknown")
+    if axis in point:
+        return point.get(axis, "unknown")
+    return point.get("coordinates", {}).get(axis, "unknown")
+
+
+def _legacy_point_to_payload(
+    point: Dict[str, Any],
+) -> Tuple[int, List[Tuple[float, List[Tuple[str, int]]]], Optional[float], Optional[float], Optional[float], Optional[float]]:
+    n_qubits = int(point.get("n_qubits", 4))
+    paulis: List[Tuple[float, List[Tuple[str, int]]]] = []
+    for term in point.get("paulis", []):
+        coeff = float(term["coeff"])
+        ops_list = []
+        for op_type, idx in term.get("ops", []):
+            ops_list.append((str(op_type).lower(), int(idx)))
+        paulis.append((coeff, ops_list))
+    full_fci_energy = None
+    if point.get("full_fci_energy") is not None:
+        full_fci_energy = float(point["full_fci_energy"])
+    elif point.get("exact_energy") is not None:
+        full_fci_energy = float(point["exact_energy"])
+    return (
+        n_qubits,
+        paulis,
+        float(point["hf_energy"]) if point.get("hf_energy") is not None else None,
+        float(point["ccsd_energy"]) if point.get("ccsd_energy") is not None else None,
+        float(point["nuclear_repulsion"]) if point.get("nuclear_repulsion") is not None else None,
+        full_fci_energy,
+    )
+
+
+def _point_exact_active(
+    point: Union[Dict[str, Any], MolecularHamiltonianPoint],
+    paulis: List[Tuple[float, List[Tuple[str, int]]]],
+    n_qubits: int,
+) -> float:
+    if isinstance(point, MolecularHamiltonianPoint):
+        return float(point.active_space_exact_energy)
+    if point.get("active_space_exact_energy") is not None:
+        return float(point["active_space_exact_energy"])
+    return float(get_exact_from_paulis(paulis, n_qubits).real)
 
 
 class LiHEnvironment(QuantumEnvironment):
@@ -131,7 +161,7 @@ class LiHEnvironment(QuantumEnvironment):
     """
 
     def __init__(self, R: Optional[float] = None):
-        data_point: Optional[Dict[str, Any]] = None
+        data_point: Optional[Union[Dict[str, Any], MolecularHamiltonianPoint]] = None
 
         if R is not None:
             data_point = _find_point_for_R(R)
@@ -139,91 +169,65 @@ class LiHEnvironment(QuantumEnvironment):
             data_point = _get_default_point()
 
         if data_point is not None:
-            n_qubits = int(data_point.get("n_qubits", 4))
-            # JSON format: "paulis": [{"coeff": ..., "ops": [["z", 0], ...]}, ...]
-            raw_paulis = data_point.get("paulis", [])
-            paulis: List[Tuple[float, List[Tuple[str, int]]]] = []
-            for term in raw_paulis:
-                coeff = float(term["coeff"])
-                ops_list = []
-                for op_type, idx in term.get("ops", []):
-                    ops_list.append((str(op_type).lower(), int(idx)))
-                paulis.append((coeff, ops_list))
-            self.paulis = paulis
-
-            self.hf_energy = (
-                float(data_point["hf_energy"])
-                if data_point.get("hf_energy") is not None
-                else None
-            )
-            self.ccsd_energy = (
-                float(data_point["ccsd_energy"])
-                if data_point.get("ccsd_energy") is not None
-                else None
-            )
-            self.nuclear_repulsion = (
-                float(data_point["nuclear_repulsion"])
-                if data_point.get("nuclear_repulsion") is not None
-                else None
-            )
-
-            # New schema stores the true full-space electronic FCI
-            # separately. Older JSON used the ambiguous `exact_energy`
-            # field, which actually held full-space total energy.
-            if data_point.get("full_fci_energy") is not None:
-                self.full_fci_energy = float(data_point["full_fci_energy"])
-            elif data_point.get("exact_energy") is not None:
-                self.full_fci_energy = float(data_point["exact_energy"])
+            if isinstance(data_point, MolecularHamiltonianPoint):
+                n_qubits = int(data_point.n_qubits)
+                self.paulis = point_to_pauli_list(data_point)
+                self.hf_energy = data_point.hf_energy
+                self.ccsd_energy = data_point.ccsd_energy
+                self.nuclear_repulsion = data_point.nuclear_repulsion
+                self.full_fci_energy = data_point.full_fci_energy
             else:
-                self.full_fci_energy = None
+                (
+                    n_qubits,
+                    self.paulis,
+                    self.hf_energy,
+                    self.ccsd_energy,
+                    self.nuclear_repulsion,
+                    self.full_fci_energy,
+                ) = _legacy_point_to_payload(data_point)
 
-            # Active-space exact energy should come from the explicit
-            # field when present; otherwise we reconstruct it from the
-            # stored qubit Hamiltonian for backward compatibility.
-            if data_point.get("active_space_exact_energy") is not None:
-                exact_active = float(data_point["active_space_exact_energy"])
-            else:
-                exact_active = get_exact_from_paulis(self.paulis, n_qubits).real
+            exact_active = _point_exact_active(data_point, self.paulis, n_qubits)
             self.exact_energy_active = exact_active
-
-            # QuantumEnvironment.exact_energy 指向 active-space exact，
-            # 这样 VQE 层面的 energy_error 代表纯粹的 ansatz 误差。
-            super().__init__(f"LiH_R_{data_point.get('R', 'unknown')}", n_qubits, exact_active)
+            point_r = _extract_coordinate(data_point, "R")
+            super().__init__(f"LiH_R_{point_r}", n_qubits, exact_active)
         else:
             # Fallback to the original toy Hamiltonian if no PySCF data is
             # available. This keeps older experiments runnable even if the
             # user has not yet generated `data/lih_pyscf_data.json`.
             super().__init__("LiH_Full", 4, float(-7.8827))
             self.paulis = [
-                (-2.4270, []),  # Constant
-                (0.132221, [('z', 0)]),
-                (0.132221, [('z', 1)]),
-                (-0.012341, [('z', 2)]),
-                (-0.012341, [('z', 3)]),
-                (0.170241, [('z', 0), ('z', 1)]),
-                (0.121401, [('z', 0), ('z', 2)]),
-                (0.168321, [('z', 0), ('z', 3)]),
-                (0.168321, [('z', 1), ('z', 2)]),
-                (0.121401, [('z', 1), ('z', 3)]),
-                (0.174321, [('z', 2), ('z', 3)]),
-                (0.045321, [('x', 0), ('x', 1), ('y', 2), ('y', 3)]),
-                (0.045321, [('y', 0), ('y', 1), ('x', 2), ('x', 3)]),
-                (0.045321, [('x', 0), ('y', 1), ('y', 2), ('x', 3)]),
-                (0.045321, [('y', 0), ('x', 1), ('x', 2), ('y', 3)]),
-                (0.018121, [('z', 0), ('z', 1), ('z', 2)]),
-                (0.018121, [('z', 0), ('z', 1), ('z', 3)]),
+                (-2.4270, []),
+                (0.132221, [("z", 0)]),
+                (0.132221, [("z", 1)]),
+                (-0.012341, [("z", 2)]),
+                (-0.012341, [("z", 3)]),
+                (0.170241, [("z", 0), ("z", 1)]),
+                (0.121401, [("z", 0), ("z", 2)]),
+                (0.168321, [("z", 0), ("z", 3)]),
+                (0.168321, [("z", 1), ("z", 2)]),
+                (0.121401, [("z", 1), ("z", 3)]),
+                (0.174321, [("z", 2), ("z", 3)]),
+                (0.045321, [("x", 0), ("x", 1), ("y", 2), ("y", 3)]),
+                (0.045321, [("y", 0), ("y", 1), ("x", 2), ("x", 3)]),
+                (0.045321, [("x", 0), ("y", 1), ("y", 2), ("x", 3)]),
+                (0.045321, [("y", 0), ("x", 1), ("x", 2), ("y", 3)]),
+                (0.018121, [("z", 0), ("z", 1), ("z", 2)]),
+                (0.018121, [("z", 0), ("z", 1), ("z", 3)]),
             ]
-            # Derive an internal "exact energy" from this toy model.
-            self.exact_energy = get_exact_from_paulis(self.paulis, self.n_qubits).real
+            self.exact_energy = float(get_exact_from_paulis(self.paulis, self.n_qubits).real)
 
     def compute_energy(self, c):
         import tensorcircuit as tc
+
         energy = 0.0
         for coeff, ops in self.paulis:
             if not ops:
                 energy += coeff
             else:
-                energy += coeff * c.expectation(*[[getattr(tc.gates, op_type)(), [idx]] for op_type, idx in ops])
+                energy += coeff * c.expectation(
+                    *[[getattr(tc.gates, op_type)(), [idx]] for op_type, idx in ops]
+                )
         return tc.backend.real(energy)
+
 
 ENV = LiHEnvironment()
