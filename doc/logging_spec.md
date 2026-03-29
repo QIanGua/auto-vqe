@@ -9,16 +9,17 @@
 
 ## 2. 记录文件
 
-每次运行通常会产生两类记录：
+每次运行通常会产生三类记录：
 
-- `results.tsv`
-  - 单次运行目录中的轻量摘要
-  - 某些入口会同步追加到 `experiments/<system>/results.tsv`
-- `results.jsonl`
-  - 写在单次运行目录中
-  - 每行是一条结构化实验记录
+- `run.json`
+  - 单次运行目录中的主审计记录
+- `events.jsonl`
+  - 单次运行目录中的 append-only 过程事件流
+- `index.jsonl`
+  - 写在 `experiments/<system>/artifacts/`
+  - 作为体系级轻量索引
 
-## 3. `results.jsonl` 核心字段
+## 3. `run.json` 核心字段
 
 | 字段名 | 类型 | 说明 |
 | :--- | :--- | :--- |
@@ -59,6 +60,7 @@
 
 典型字段：
 
+- `run_json`
 - `report_md`
 - `circuit_png`
 - `convergence_png`
@@ -70,12 +72,13 @@
 
 - `experiments/lih/artifacts/runs/20260329_120000_lih_vqe/`
 - `experiments/lih/artifacts/runs/20260329_120000_lih_geom_scan/`
-- `experiments/tfim/20260329_120000_tfim_vqe/`
+- `experiments/tfim/artifacts/runs/20260329_120000_tfim_vqe/`
 
-对应的 `results.jsonl` 就位于该运行目录中。
+对应的 `run.json` 与 `events.jsonl` 就位于该运行目录中。
 
 ## 7. 注意事项
 
-- `results.tsv` 是轻量摘要，不是完整审计来源。
-- 严格审计、后处理和数据集化应优先使用 `results.jsonl`。
+- `run.json` 是单次运行的主审计真相源。
+- `events.jsonl` 负责记录过程中间事件，不替代最终结论。
+- `index.jsonl` 只用于快速检索，不替代单次运行记录。
 - `ResearchSession` 仍有独立日志语义，不应与本规范混为一谈。

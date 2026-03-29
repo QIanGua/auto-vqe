@@ -35,7 +35,7 @@
     *   **深度**：2 层 (`layers=2`)
     *   **门集合**：旋转门 `RY` + `CNOT` 纠缠
 *   **洞察**：线性纠缠配合简单的 `RY` 旋转已足以捕捉 LiH 的大部分轨道相关性。
-*   **配置文件**：该网格搜索最优配置已保存至 [best_config_multidim.json](best_config_multidim.json)；另有遗传算法提供的复杂搜索建议可见 [ga/best_config_ga.json](../ga/best_config_ga.json)。
+*   **配置文件**：该网格搜索最优配置已保存至 [multidim.json](/Users/qianlong/tries/2026-03-10-auto-vqe/experiments/lih/presets/multidim.json)；另有遗传算法提供的复杂搜索建议可见 [ga.json](/Users/qianlong/tries/2026-03-10-auto-vqe/experiments/lih/presets/ga.json)。
 
 ### 3.2 维度敏感性研究
 | 维度 | 观察结果 | 建议 |
@@ -50,7 +50,7 @@
 ## 4. 训练过程可视化
 
 ### 4.1 历史可视化说明
-本报告引用的原始收敛曲线与线路图属于早期生成产物，当前已不再直接保存在该目录。若需查看，请重新运行 `search.py`，并在新生成的时间戳运行目录中读取对应的 `convergence_*.png` 与 `circuit_*.png`。
+本报告引用的原始收敛曲线与线路图属于早期生成产物，当前已不再直接保存在该目录。若需查看，请重新运行 `run.py search multidim`，并在新生成的时间戳运行目录中读取对应的 `convergence_*.png` 与 `circuit_*.png`。
 
 ---
 

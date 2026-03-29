@@ -6,7 +6,6 @@ behind the generator namespace introduced by the Representation / Generator /
 Evaluator split.
 """
 
-import datetime
 import json
 import logging
 import os
@@ -80,10 +79,7 @@ class GASearchStrategy(GeneratorStrategy):
             self.exp_dir = exp_dir
 
         if logger is None:
-            log_path = os.path.join(
-                self.exp_dir,
-                f"{base_exp_name}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
-            )
+            log_path = os.path.join(self.exp_dir, "run.log")
             self.logger = setup_logger(log_path)
         else:
             self.logger = logger
@@ -275,13 +271,8 @@ class GASearchStrategy(GeneratorStrategy):
         print_results(self.best_overall, logger=self.logger)
         self.logger.info(f"Best Config: {config_to_str(self.best_config)}")
 
-        config_path = os.path.join(self.exp_dir, "best_config_ga.json")
-        with open(config_path, "w", encoding="utf-8") as f:
-            json.dump(self.best_config, f, indent=4)
-        self.logger.info(f"Best GA config saved to {config_path}")
-
         create_fn, _ = self.make_circuit_fn(self.best_config)
-        report_path = generate_report(
+        record_path = generate_report(
             self.exp_dir,
             f"{self.base_exp_name}_Best",
             self.best_overall,
@@ -293,7 +284,7 @@ class GASearchStrategy(GeneratorStrategy):
         return {
             "best_config": self.best_config,
             "best_results": self.best_overall,
-            "report_path": report_path,
+            "record_path": record_path,
             "ansatz_spec": self.best_spec,
         }
 

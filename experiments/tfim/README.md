@@ -1,22 +1,18 @@
 # TFIM Experiment Layout
 
-## Core entrypoints
+## Canonical files
 
-- `run.py`: main TFIM verification run using the current best config.
 - `env.py`: TFIM environment definition.
+- `run.py`: the only user-facing TFIM entrypoint. It owns verification,
+  `search`, `baseline`, `auto`, `research-step`, and `scale-100q`.
 
-## Stable subfolders
+The shared execution engine lives in
+[experiments/shared.py](/Users/qianlong/tries/2026-03-10-auto-vqe/experiments/shared.py),
+while TFIM-specific policy stays inline in `run.py`.
 
-- `baseline/`: explicit baseline runs for comparison.
-- `ga/`: GA search entrypoint and persisted best config.
-- `multidim/`: structured grid-search entrypoint and persisted best config.
+## Other folders
 
-## Auxiliary but useful
-
-- `orchestration/`: higher-level multi-strategy orchestration demos.
-- `scaling/`: specialized large-scale experiments such as 100-qubit MPS runs.
-
-## Generated artifacts
-
-- `__pycache__/`, timestamped experiment folders, and report outputs are runtime
-  artifacts rather than primary scripts.
+- `presets/`: promoted best-known configs such as GA and MultiDim winners.
+- `notes/`: human-written analysis summaries for those presets.
+- `artifacts/`: runtime outputs. New TFIM runs now belong here instead of the
+  system top level.

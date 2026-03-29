@@ -56,7 +56,7 @@
 - Memory Layer
   - 保存 hypothesis、evidence、dead ends、transferable insights
 - Audit Layer
-  - 对齐 `results.jsonl`、autoresearch log、artifact paths
+  - 对齐 `run.json`、autoresearch log、artifact paths
 
 ## 4. 单 Agent 研究员架构图
 
@@ -70,7 +70,7 @@ flowchart TD
     F --> G["ResultInterpreter"]
     G --> H["DecisionRecord"]
     H --> A
-    F --> I["results.jsonl / reports / artifacts"]
+    F --> I["run.json / optional reports / artifacts"]
     B --> J["SearchController"]
     J --> E
 ```
@@ -357,7 +357,7 @@ class ExperimentExecutor:
 第一版执行策略：
 
 - `run_strategy`
-  - 兼容当前 `experiments/*/ga/search.py`、`multidim/search.py`
+  - 兼容当前 `experiments/*/run.py search ga`、`experiments/*/run.py search multidim`
 - `verify_config`
   - 兼容当前 `experiments/*/run.py --config ...`
 - `promote_candidate`

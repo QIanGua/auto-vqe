@@ -2,8 +2,6 @@
 Grid / exhaustive search as a generator module.
 """
 
-import datetime
-import json
 import logging
 import os
 from typing import Any, Dict, Optional
@@ -81,10 +79,7 @@ def ansatz_search(
         os.makedirs(exp_dir, exist_ok=True)
 
     if logger is None:
-        log_path = os.path.join(
-            exp_dir,
-            f"{base_exp_name}_search_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log",
-        )
+        log_path = os.path.join(exp_dir, "run.log")
         logger = setup_logger(log_path)
 
     if controller is None:
@@ -223,7 +218,7 @@ def ansatz_search(
         else:
             best_create_fn = getattr(best_ansatz_obj, "create_circuit")
 
-        report_path = generate_report(
+        record_path = generate_report(
             exp_dir,
             f"{base_exp_name}_Best_Report",
             best_overall,
@@ -231,20 +226,12 @@ def ansatz_search(
             comment=f"Best config: {summarize_config(best_overall_config)}",
             ansatz_spec=best_overall_spec,
         )
-        logger.info(f"Report generated at: {report_path}")
-
-        config_path = os.path.join(exp_dir, "best_config_multidim.json")
-        try:
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(best_overall_config, f, indent=4)
-            logger.info(f"Best MultiDim config saved to {config_path}")
-        except Exception as e:
-            logger.error(f"Failed to save best config: {e}")
+        logger.info(f"Run record generated at: {record_path}")
 
         return {
             "best_config": best_overall_config,
             "best_results": best_overall,
-            "report_path": report_path,
+            "record_path": record_path,
             "ansatz_spec": best_overall_spec,
         }
 

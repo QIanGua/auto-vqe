@@ -53,7 +53,7 @@ class ExperimentExecutor:
             stdout=self.subprocess.PIPE,
             stderr=self.subprocess.STDOUT,
             text=True,
-            env=env,
+            env={**env, "PYTHONDONTWRITEBYTECODE": "1"},
         )
 
         metrics: Dict[str, Any] = {}
@@ -89,13 +89,22 @@ class ExperimentExecutor:
         if emit is not None:
             emit(f"\n>>> Iteration {iteration} Starting... strategy={strategy}", log_path)
 
-        bench_sh = os.path.join(system_dir, "orchestration", "autoresearch.sh")
         env = os.environ.copy()
         if session_dir:
             env["AGENT_VQE_SESSION_DIR"] = session_dir
         env["AGENT_VQE_ITERATION"] = f"iter_{iteration:04d}"
         result = self._run_process(
-            ["bash", bench_sh, strategy],
+            [
+                "uv",
+                "run",
+                "python",
+                os.path.join(system_dir, "run.py"),
+                "research-step",
+                "--strategy",
+                strategy,
+                "--verify-trials",
+                "2",
+            ],
             env=env,
             log_path=log_path,
             emit=emit,
@@ -119,9 +128,9 @@ class ExperimentExecutor:
             )
         candidates.extend(
             [
-                os.path.join(system_dir, strategy, f"best_config_{strategy}.json"),
-                os.path.join(system_dir, "best_config_ga.json"),
-                os.path.join(system_dir, "best_config_multidim.json"),
+                os.path.join(system_dir, "presets", f"{strategy}.json"),
+                os.path.join(system_dir, "presets", "ga.json"),
+                os.path.join(system_dir, "presets", "multidim.json"),
                 os.path.join(system_dir, "best_config.json"),
             ]
         )

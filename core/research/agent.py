@@ -69,7 +69,7 @@ class ResearchAgent:
     def _load_best_config(self, selected_config_path: Optional[str]) -> Dict[str, Any]:
         config_path = selected_config_path
         if not isinstance(config_path, str) or not config_path:
-            config_path = os.path.join(self.system_dir, "ga", "best_config_ga.json")
+            config_path = os.path.join(self.system_dir, "presets", "ga.json")
         if os.path.exists(config_path):
             import json
 

@@ -15,10 +15,11 @@ Agent-VQE is a configurable framework for automated ansatz search in VQE workflo
   - `core/orchestration/`: controller and multi-strategy orchestration
   - `core/research/`: resumable Agent runtime for outer-loop research
   - `core/warmstart/`: parameter/config mapping for structure changes
-- Experiment folders have been normalized:
-  - source-like entrypoints stay near `run.py`, `ga/search.py`, `multidim/search.py`
-  - LiH and autoresearch outputs live under `artifacts/`
-  - TFIM still keeps some timestamped run folders directly under `experiments/tfim/`
+- Experiment folders now follow a lower-cognitive-load model:
+  - each system has `env.py` and one `run.py`
+  - shared execution logic lives in `experiments/shared.py`
+  - search/baseline/orchestration are subcommands, not sibling scripts
+  - runtime outputs live under `artifacts/`
 - The structured experiment log schema in active use is `1.2`.
 - The research loop now has a structured Agent runtime built around:
   - `ResearchAgent`
@@ -61,12 +62,12 @@ Quick CLI-only checks:
 ```bash
 uv run python experiments/tfim/run.py --help
 uv run python experiments/lih/run.py --help
-uv run python experiments/tfim/ga/search.py --help
-uv run python experiments/tfim/multidim/search.py --help
-uv run python experiments/lih/ga/search.py --help
-uv run python experiments/lih/multidim/search.py --help
-uv run python experiments/tfim/orchestration/auto_search.py --help
-uv run python experiments/lih/orchestration/auto_search.py --help
+uv run python experiments/tfim/run.py search ga --help
+uv run python experiments/tfim/run.py search multidim --help
+uv run python experiments/lih/run.py search ga --help
+uv run python experiments/lih/run.py search multidim --help
+uv run python experiments/tfim/run.py auto --help
+uv run python experiments/lih/run.py auto --help
 uv run python core/research/runtime.py --help
 uv run python core/molecular/generate.py --list
 ```
@@ -87,8 +88,8 @@ uv run python experiments/lih/run.py
 Use an explicit config when needed:
 
 ```bash
-uv run python experiments/tfim/run.py --config experiments/tfim/ga/best_config_ga.json --trials 5
-uv run python experiments/lih/run.py --config experiments/lih/multidim/best_config_multidim.json --trials 2
+uv run python experiments/tfim/run.py --config experiments/tfim/presets/ga.json --trials 5
+uv run python experiments/lih/run.py --config experiments/lih/presets/multidim.json --trials 2
 ```
 
 ### 2. Run structural search
@@ -96,17 +97,17 @@ uv run python experiments/lih/run.py --config experiments/lih/multidim/best_conf
 These commands start real search jobs and can take substantial time.
 
 ```bash
-uv run python experiments/tfim/ga/search.py
-uv run python experiments/tfim/multidim/search.py
-uv run python experiments/lih/ga/search.py
-uv run python experiments/lih/multidim/search.py
+uv run python experiments/tfim/run.py search ga
+uv run python experiments/tfim/run.py search multidim
+uv run python experiments/lih/run.py search ga
+uv run python experiments/lih/run.py search multidim
 ```
 
 CLI-only smoke:
 
 ```bash
-uv run python experiments/tfim/ga/search.py --help
-uv run python experiments/lih/multidim/search.py --help
+uv run python experiments/tfim/run.py search ga --help
+uv run python experiments/lih/run.py search multidim --help
 ```
 
 ### 3. Run orchestrated search demos
@@ -114,15 +115,15 @@ uv run python experiments/lih/multidim/search.py --help
 These also launch real search/evaluation work rather than a smoke test.
 
 ```bash
-uv run python experiments/tfim/orchestration/auto_search.py
-uv run python experiments/lih/orchestration/auto_search.py
+uv run python experiments/tfim/run.py auto
+uv run python experiments/lih/run.py auto
 ```
 
 CLI-only smoke:
 
 ```bash
-uv run python experiments/tfim/orchestration/auto_search.py --help
-uv run python experiments/lih/orchestration/auto_search.py --help
+uv run python experiments/tfim/run.py auto --help
+uv run python experiments/lih/run.py auto --help
 ```
 
 ### 4. Run the Agent outer-loop research runtime
@@ -244,15 +245,15 @@ uv run python experiments/lih/run.py --help
 Run search:
 
 ```bash
-uv run python experiments/tfim/ga/search.py
-uv run python experiments/lih/multidim/search.py
+uv run python experiments/tfim/run.py search ga
+uv run python experiments/lih/run.py search multidim
 ```
 
 CLI-only smoke:
 
 ```bash
-uv run python experiments/tfim/ga/search.py --help
-uv run python experiments/lih/multidim/search.py --help
+uv run python experiments/tfim/run.py search ga --help
+uv run python experiments/lih/run.py search multidim --help
 ```
 
 Run Agent runtime:
@@ -291,17 +292,16 @@ just test-all
 
 Normal experiment runs are written into timestamped folders created by `prepare_experiment_dir()`:
 
-- LiH verification and scans:
-  - `experiments/lih/artifacts/runs/<timestamp>_<exp_name>/experiment.log`
-  - `experiments/lih/artifacts/runs/<timestamp>_<exp_name>/results.tsv`
-  - `experiments/lih/artifacts/runs/<timestamp>_<exp_name>/results.jsonl`
-- TFIM verification:
-  - `experiments/tfim/<timestamp>_<exp_name>/experiment.log`
-  - `experiments/tfim/<timestamp>_<exp_name>/results.tsv`
-  - `experiments/tfim/<timestamp>_<exp_name>/results.jsonl`
-- optional circuit/convergence render artifacts when report generation succeeds
+- `experiments/<system>/artifacts/runs/<timestamp>_<exp_name>/run.log`
+- `experiments/<system>/artifacts/runs/<timestamp>_<exp_name>/run.json`
+- `experiments/<system>/artifacts/runs/<timestamp>_<exp_name>/events.jsonl`
+- `experiments/<system>/artifacts/runs/<timestamp>_<exp_name>/config_snapshot.json` when a concrete ansatz/config snapshot is available
 
-In addition, `log_results()` appends a lightweight summary table to `experiments/<system>/results.tsv`.
+Optional heavy artifacts are no longer produced by default. Markdown reports, circuit images, convergence plots, and circuit JSON are opt-in render outputs.
+
+Each system also maintains a compact append-only index at:
+
+- `experiments/<system>/artifacts/index.jsonl`
 
 Generated molecular Hamiltonian datasets now default to:
 
@@ -345,8 +345,8 @@ Structured Agent memory currently lives in:
 
 - TFIM verification loads configs in priority order:
   1. explicit `--config`
-  2. `ga/best_config_ga.json`
-  3. `multidim/best_config_multidim.json`
+  2. `presets/ga.json`
+  3. `presets/multidim.json`
   4. local fallback config
 - LiH verification follows the same priority and also includes a geometry-scan path in `experiments/lih/run.py`.
 
@@ -375,6 +375,7 @@ Notable coverage areas:
 - `doc/agent_runtime_guide.md`: how the current Agent runtime works and how to run it
 - `doc/molecular_hamiltonian_guide.md`: shared molecular builder and dataset generation guide
 - `doc/logging_spec.md`: current logging schema
+- `doc/experiment_artifact_protocol.md`: current experiment output and retention contract
 - `doc/evaluation_protocol.md`: comparison and budget guidelines
 - `doc/orchestration_protocol.md`: orchestration contract
 - `doc/agent_architecture.md`: architecture and module-level design notes
@@ -392,7 +393,7 @@ Agent-VQE 是一个面向自动 Ansatz 搜索的 VQE 实验框架。当前仓库
 
 - `core/` 已完成分层重构，不再使用早期扁平文件布局。
 - `experiments/lih` 与 `experiments/tfim` 已统一为“源码入口 + `artifacts/` 产物目录”的组织方式。
-- 主运行入口仍然是 `run.py`，搜索入口是 `ga/search.py`、`multidim/search.py`，多策略演示入口是 `orchestration/auto_search.py`。
+- 每个 system 现在只保留一个 `run.py` 命令面，搜索、基线、编排与扩展工具都作为子命令进入。
 - `core/research/` 现在已经不是简单脚本集合，而是结构化 Agent runtime。
 - 结构化实验日志当前采用 `schema_version = 1.2`。
 
@@ -414,8 +415,8 @@ uv run python experiments/lih/run.py
 3. 运行结构搜索
 
 ```bash
-uv run python experiments/tfim/ga/search.py
-uv run python experiments/lih/multidim/search.py
+uv run python experiments/tfim/run.py search ga
+uv run python experiments/lih/run.py search multidim
 ```
 
 4. 运行 Agent 外层研究循环
@@ -470,15 +471,16 @@ ResearchAgent
 
 ## 结果产物
 
-常规实验会写入 `experiments/<system>/artifacts/runs/<timestamp>_<exp_name>/`，其中包含：
+常规实验会写入 `experiments/<system>/artifacts/runs/<timestamp>_<exp_name>/`，其中默认包含：
 
-- `experiment.log`
-- `results.tsv`
-- `results.jsonl`
-- `report_*.md`
-- 可选的线路图、收敛曲线、线路 JSON
+- `run.log`
+- `run.json`
+- `events.jsonl`
+- `config_snapshot.json`（若存在可落盘的结构快照）
 
-同时，`experiments/<system>/results.tsv` 会保留该体系的轻量汇总表。
+可选重文件如 `report_*.md`、线路图、收敛曲线、线路 JSON 不再默认生成。
+
+同时，`experiments/<system>/artifacts/index.jsonl` 会保留体系级的 append-only 轻量索引。
 
 ## 项目重点
 

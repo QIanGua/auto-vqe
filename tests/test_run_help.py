@@ -6,10 +6,13 @@ import sys
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
-def _run_help(script_path: str) -> subprocess.CompletedProcess[str]:
+def _run_help(script_path: str, *args: str) -> subprocess.CompletedProcess[str]:
+    env = os.environ.copy()
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return subprocess.run(
-        [sys.executable, script_path, "--help"],
+        [sys.executable, script_path, *args, "--help"],
         cwd=REPO_ROOT,
+        env=env,
         capture_output=True,
         text=True,
         timeout=20,
@@ -47,43 +50,67 @@ def test_molecular_generate_help_stays_cli_only():
     assert "pyscf" not in result.stderr.lower()
 
 
-def test_tfim_ga_search_help_stays_cli_only():
-    result = _run_help("experiments/tfim/ga/search.py")
+def test_tfim_search_help_stays_cli_only():
+    result = _run_help("experiments/tfim/run.py", "search")
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout.lower()
-    assert "starting ga search" not in result.stdout.lower()
+    assert "ga" in result.stdout.lower()
+    assert "multidim" in result.stdout.lower()
 
 
-def test_tfim_multidim_search_help_stays_cli_only():
-    result = _run_help("experiments/tfim/multidim/search.py")
+def test_tfim_baseline_help_stays_cli_only():
+    result = _run_help("experiments/tfim/run.py", "baseline")
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout.lower()
-    assert "--- config " not in result.stdout.lower()
+    assert "tensorcircuit" not in result.stderr.lower()
 
 
-def test_lih_ga_search_help_stays_cli_only():
-    result = _run_help("experiments/lih/ga/search.py")
+def test_lih_search_help_stays_cli_only():
+    result = _run_help("experiments/lih/run.py", "search")
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout.lower()
-    assert "starting ga search" not in result.stdout.lower()
+    assert "ga" in result.stdout.lower()
+    assert "multidim" in result.stdout.lower()
 
 
-def test_lih_multidim_search_help_stays_cli_only():
-    result = _run_help("experiments/lih/multidim/search.py")
+def test_lih_baseline_help_stays_cli_only():
+    result = _run_help("experiments/lih/run.py", "baseline")
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout.lower()
-    assert "--- config " not in result.stdout.lower()
+    assert "tensorcircuit" not in result.stderr.lower()
 
 
 def test_tfim_auto_search_help_stays_cli_only():
-    result = _run_help("experiments/tfim/orchestration/auto_search.py")
+    result = _run_help("experiments/tfim/run.py", "auto")
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout.lower()
     assert "starting ga search" not in result.stdout.lower()
+
+
+def test_tfim_scale_100q_help_stays_cli_only():
+    result = _run_help("experiments/tfim/run.py", "scale-100q")
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+    assert "scipy" not in result.stderr.lower()
 
 
 def test_lih_auto_search_help_stays_cli_only():
-    result = _run_help("experiments/lih/orchestration/auto_search.py")
+    result = _run_help("experiments/lih/run.py", "auto")
     assert result.returncode == 0, result.stderr
     assert "usage:" in result.stdout.lower()
     assert "starting ga search" not in result.stdout.lower()
+
+
+def test_lih_plot_help_stays_cli_only():
+    result = _run_help("experiments/lih/run.py", "plot")
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+    assert "matplotlib" not in result.stderr.lower()
+
+
+def test_lih_compare_help_stays_cli_only():
+    result = _run_help("experiments/lih/run.py", "compare")
+    assert result.returncode == 0, result.stderr
+    assert "usage:" in result.stdout.lower()
+    assert "mindquantum" not in result.stderr.lower()
+    assert "mindspore" not in result.stderr.lower()

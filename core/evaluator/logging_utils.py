@@ -39,28 +39,21 @@ def print_results(results, logger=None):
 
 
 def log_results(exp_dir, exp_name, results, comment="", global_dir=None):
-    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    header = "timestamp\texp_name\tval_energy\tenergy_error\tnum_params\tactual_steps\ttraining_sec\tcomment\n"
-    actual_steps = results.get("actual_steps", "N/A")
-    line = (
-        f"{ts}\t{exp_name}\t{results['val_energy']:.6f}\t{results['energy_error']:.6f}\t"
-        f"{results['num_params']}\t{actual_steps}\t{results['training_seconds']}\t{comment}\n"
-    )
+    record = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "exp_name": exp_name,
+        "val_energy": results.get("val_energy"),
+        "energy_error": results.get("energy_error"),
+        "num_params": results.get("num_params"),
+        "actual_steps": results.get("actual_steps"),
+        "training_seconds": results.get("training_seconds"),
+        "comment": comment,
+    }
+    append_event_jsonl(exp_dir, record)
 
-    log_path = os.path.join(exp_dir, "results.tsv")
-    file_exists = os.path.isfile(log_path)
-    with open(log_path, "a", encoding="utf-8") as f:
-        if not file_exists:
-            f.write(header)
-        f.write(line)
-
-    if global_dir and global_dir != exp_dir:
-        global_path = os.path.join(global_dir, "results.tsv")
-        global_exists = os.path.isfile(global_path)
-        with open(global_path, "a", encoding="utf-8") as f:
-            if not global_exists:
-                f.write(header)
-            f.write(line)
+    # Deprecated in the compact artifact model. Kept in the signature so older
+    # call sites do not break while we converge on the new layout.
+    _ = global_dir
 
 
 def summarize_config(config):
@@ -71,9 +64,13 @@ def summarize_config(config):
 
 
 def append_experiment_jsonl(exp_dir: str, record: Dict[str, Any]) -> None:
-    path = os.path.join(exp_dir, "results.jsonl")
+    path = os.path.join(exp_dir, "events.jsonl")
     with open(path, "a", encoding="utf-8") as f:
         if "schema_version" not in record:
             record["schema_version"] = "1.2"
         f.write(json.dumps(record, ensure_ascii=False))
         f.write("\n")
+
+
+def append_event_jsonl(exp_dir: str, record: Dict[str, Any]) -> None:
+    append_experiment_jsonl(exp_dir, record)

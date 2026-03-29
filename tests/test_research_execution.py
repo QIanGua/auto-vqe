@@ -88,9 +88,9 @@ def test_executor_reduce_search_space_generates_patched_config_then_verifies(tmp
     system_dir = tmp_path / "experiments" / "tfim"
     system_dir.mkdir(parents=True)
     (system_dir / "run.py").write_text("# test stub\n", encoding="utf-8")
-    base_config_dir = system_dir / "ga"
+    base_config_dir = system_dir / "presets"
     base_config_dir.mkdir()
-    base_config_path = base_config_dir / "best_config_ga.json"
+    base_config_path = base_config_dir / "ga.json"
     base_config_path.write_text(
         json.dumps(
             {
@@ -149,7 +149,7 @@ def test_executor_promote_candidate_verifies_selected_config_with_fidelity_trial
     system_dir = tmp_path / "experiments" / "lih"
     system_dir.mkdir(parents=True)
     (system_dir / "run.py").write_text("# test stub\n", encoding="utf-8")
-    config_path = system_dir / "multidim" / "best_config_multidim.json"
+    config_path = system_dir / "presets" / "multidim.json"
     config_path.parent.mkdir()
     config_path.write_text(json.dumps({"layers": 2, "entanglement": "linear"}), encoding="utf-8")
 

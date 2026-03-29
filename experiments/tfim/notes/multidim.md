@@ -38,14 +38,14 @@
 ### 3.3 门集合的选择
 实验对比了 `RY` 门与 `RY+RZ` 门：
 *   **洞察**：增加 `RZ` 门虽然理论上增强了表达力，但在 TFIM 实测中，多出来的参数反而增加了随机梯度下降的震荡风险，且并未带来量级上的精度提升。**奥卡姆剃刀原则：RY 门足矣。**
-*   **配置文件**：网格搜索最优配置见 [best_config_multidim.json](best_config_multidim.json)；遗传算法（GA）搜寻的高精度复杂回路见 [ga/best_config_ga.json](../ga/best_config_ga.json)。
+*   **配置文件**：网格搜索最优配置见 [multidim.json](/Users/qianlong/tries/2026-03-10-auto-vqe/experiments/tfim/presets/multidim.json)；遗传算法（GA）搜寻的高精度复杂回路见 [ga.json](/Users/qianlong/tries/2026-03-10-auto-vqe/experiments/tfim/presets/ga.json)。
 
 ---
 
 ## 4. 结果可视化
 
 ### 4.1 历史可视化说明
-早期的收敛曲线与线路图产物已从源码目录中移出。若需要图像，请重新运行 `search.py`，并在新生成的实验目录中查看 `convergence_*.png` 与 `circuit_*.png`。
+早期的收敛曲线与线路图产物已从源码目录中移出。若需要图像，请重新运行 `run.py search multidim`，并在新生成的实验目录中查看 `convergence_*.png` 与 `circuit_*.png`。
 
 ---
 

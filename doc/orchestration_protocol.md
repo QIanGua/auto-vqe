@@ -19,7 +19,7 @@
 
 ### 1.3 Resume 语义 (Resumption)
 - **运行目录**: 编排器驱动的实验应落在独立时间戳目录内，便于恢复与审计。
-- **当前恢复方式**: 更长周期的恢复目前主要由 `core/research/runtime.py` + `ResearchSession` 承担，而不是 `SearchOrchestrator` 直接消费 `results.jsonl`。
+- **当前恢复方式**: 更长周期的恢复目前主要由 `core/research/runtime.py` + `ResearchSession` 承担，而不是 `SearchOrchestrator` 直接消费 `run.json`。
 
 ---
 

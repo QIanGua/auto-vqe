@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+from dataclasses import replace
 
 import pytest
 import torch
@@ -67,7 +68,8 @@ def test_ga_search_strategy(exp_dir):
 
 
 def test_lih_ga_search_writes_plain_best_config(tmp_path, monkeypatch):
-    from experiments.lih.ga import search as lih_ga_search
+    from experiments.lih.run import MANIFEST
+    from experiments.shared import run_search_experiment
 
     expected_config = {
         "init_state": "hf",
@@ -83,16 +85,17 @@ def test_lih_ga_search_writes_plain_best_config(tmp_path, monkeypatch):
     }
 
     monkeypatch.setattr(
-        lih_ga_search,
-        "GASearchStrategy",
+        "core.generator.ga.GASearchStrategy",
         lambda *args, **kwargs: type("DummyStrategy", (), {"run": lambda self: wrapped_result})(),
     )
-    monkeypatch.setattr("experiments.lih.ga.search.prepare_experiment_dir", lambda *args, **kwargs: str(tmp_path / "run"))
-    monkeypatch.setattr(lih_ga_search, "__file__", str(tmp_path / "ga" / "search.py"))
+    monkeypatch.setattr("core.evaluator.api.prepare_experiment_dir", lambda *args, **kwargs: str(tmp_path / "run"))
+    temp_manifest = replace(MANIFEST, system_dir=str(tmp_path), runs_dir=str(tmp_path / "runs"))
 
-    result = lih_ga_search.run_ga_search()
+    result = run_search_experiment(temp_manifest, "ga")
 
-    assert result == wrapped_result
-    with open(tmp_path / "ga" / "best_config_ga.json", "r") as f:
+    assert result["best_config"] == expected_config
+    assert result["best_results"] == wrapped_result["best_results"]
+    assert result["best_config_path"] == str(tmp_path / "presets" / "ga.json")
+    with open(tmp_path / "presets" / "ga.json", "r") as f:
         persisted = json.load(f)
     assert persisted == expected_config

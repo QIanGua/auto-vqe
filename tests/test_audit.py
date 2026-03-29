@@ -52,26 +52,27 @@ def test_audit_logging():
             seed=42
         )
         
-        # 4. Generate report (this triggers the JSONL append with audit info)
+        # 4. Generate compact run record with optional markdown report
         print("Generating report and logging audit info...")
-        report_path = generate_report(
+        record_path = generate_report(
             exp_dir=test_dir,
             exp_name="SmokeTestExp",
             results=results,
             create_circuit_fn=create_circuit_fn,
             ansatz_spec=config,
-            config_path=config_path
+            config_path=config_path,
+            render_markdown=True,
         )
         
-        # 5. Verify results.jsonl contents
-        jsonl_path = os.path.join(test_dir, "results.jsonl")
+        # 5. Verify run.json contents
+        jsonl_path = os.path.join(test_dir, "run.json")
         if not os.path.exists(jsonl_path):
-            raise RuntimeError("results.jsonl was not created!")
+            raise RuntimeError("run.json was not created!")
             
         with open(jsonl_path, "r") as f:
-            record = json.loads(f.readline())
+            record = json.load(f)
             
-        print("\nVerifying JSONL Record Fields:")
+        print("\nVerifying Run Record Fields:")
         expected_fields = [
             "schema_version", 
             "git_info", 
@@ -106,7 +107,7 @@ def test_audit_logging():
                 print(f"  [FAIL] Patch file MISSING at {full_patch_path}")
         
         if "diff" in git_info and git_info["diff"]:
-            print("  [FAIL] Full 'diff' text STILL in JSONL!")
+            print("  [FAIL] Full 'diff' text STILL in run.json!")
         else:
             print("  [PASS] Full 'diff' text removed from JSONL.")
             
@@ -117,12 +118,16 @@ def test_audit_logging():
             print("  [PASS] Config path tracking works.")
             
         # 6. Verify Report.md content
-        with open(report_path, "r") as f:
+        report_files = [name for name in os.listdir(test_dir) if name.startswith("report_") and name.endswith(".md")]
+        assert report_files
+        with open(os.path.join(test_dir, report_files[0]), "r") as f:
             report_text = f.read()
             if "## 五、 审计信息" in report_text:
                 print("  [PASS] Report contains Audit Info section.")
             else:
                 print("  [FAIL] Report MISSING Audit Info section.")
+
+        assert os.path.exists(record_path)
 
         print("\nSmoke Test Completed Successfully!")
         

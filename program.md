@@ -15,9 +15,9 @@
 以下内容属于可搜索、可改进的猜想空间：
 
 - `core/representation/compiler.py`
-- `experiments/*/ga/search.py`
-- `experiments/*/multidim/search.py`
-- `experiments/*/orchestration/auto_search.py`
+- `experiments/*/run.py search ga`
+- `experiments/*/run.py search multidim`
+- `experiments/*/run.py auto`
 - `core/generator/` 中的策略实现
 - `core/warmstart/` 中的参数继承规则
 
@@ -42,8 +42,8 @@
 显式指定配置时可使用：
 
 ```bash
-uv run python experiments/tfim/run.py --config experiments/tfim/ga/best_config_ga.json --trials 5
-uv run python experiments/lih/run.py --config experiments/lih/multidim/best_config_multidim.json --trials 2
+uv run python experiments/tfim/run.py --config experiments/tfim/presets/ga.json --trials 5
+uv run python experiments/lih/run.py --config experiments/lih/presets/multidim.json --trials 2
 ```
 
 ## 4. 奥卡姆剃刀原则
@@ -71,22 +71,22 @@ uv run python experiments/lih/run.py --config experiments/lih/multidim/best_conf
 ### 方式一：GA 搜索
 
 ```bash
-uv run python experiments/tfim/ga/search.py
-uv run python experiments/lih/ga/search.py
+uv run python experiments/tfim/run.py search ga
+uv run python experiments/lih/run.py search ga
 ```
 
 ### 方式二：多维网格搜索
 
 ```bash
-uv run python experiments/tfim/multidim/search.py
-uv run python experiments/lih/multidim/search.py
+uv run python experiments/tfim/run.py search multidim
+uv run python experiments/lih/run.py search multidim
 ```
 
 ### 方式三：多策略编排
 
 ```bash
-uv run python experiments/tfim/orchestration/auto_search.py
-uv run python experiments/lih/orchestration/auto_search.py
+uv run python experiments/tfim/run.py auto
+uv run python experiments/lih/run.py auto
 ```
 
 ### 方式四：可恢复外层研究循环
@@ -118,19 +118,17 @@ runtime.py
 
 常见输出包括：
 
-- `experiment.log`
-- `results.tsv`
-- `results.jsonl`
-- `report_*.md`
-- `convergence_*.png`
-- `circuit_*.png`
-- `circuit_*.json`
+- `run.log`
+- `run.json`
+- `events.jsonl`
+- `config_snapshot.json`（若有结构快照）
 
 注意：
 
-- LiH 的默认运行产物集中到 `experiments/lih/artifacts/runs/`
+- LiH 与 TFIM 的默认运行产物都集中到 `experiments/<system>/artifacts/runs/`
 - 长周期 autoresearch session 在 `experiments/<system>/artifacts/runs/autoresearch/`
-- `experiments/<system>/results.tsv` 会保留系统级轻量汇总
+- `experiments/<system>/artifacts/index.jsonl` 会保留系统级轻量索引
+- `report_*.md`、`convergence_*.png`、`circuit_*.png`、`circuit_*.json` 现在属于显式开启的可选重产物
 
 ## 9. 预算与停止规则
 
@@ -141,6 +139,6 @@ runtime.py
 ## 10. 当前注意事项
 
 - `AdaptVQEStrategy` 已存在于 `core/generator/adapt.py`，但还不是标准实验入口。
-- `results.jsonl` 当前 schema 为 `1.2`。
+- `run.json` 当前记录的结构化 schema 仍沿用 `1.2` 字段集。
 - Agent runtime 当前主真相源是 `DecisionRecord + RunBundle + research_memory.json`。
 - `autoresearch.jsonl` 与 `autoresearch.md` 仍保留为 session 兼容视图。

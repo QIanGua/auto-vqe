@@ -16,7 +16,7 @@ def test_run_iteration_parses_string_metrics_and_uses_selected_config(tmp_path, 
     system_dir = tmp_path / "experiments" / "lih"
     system_dir.mkdir(parents=True)
 
-    selected_config_path = system_dir / "multidim" / "best_config_multidim.json"
+    selected_config_path = system_dir / "presets" / "multidim.json"
     selected_config_path.parent.mkdir(parents=True)
     expected_config = {
         "init_state": "hf",
@@ -57,7 +57,7 @@ def test_run_iteration_parses_string_metrics_and_uses_selected_config(tmp_path, 
     )
 
     assert success is True
-    assert captured["cmd"][-1] == "multidim"
+    assert captured["cmd"][-5:] == ["research-step", "--strategy", "multidim", "--verify-trials", "2"]
     assert captured["env"]["AGENT_VQE_SESSION_DIR"] == str(session_dir)
     assert captured["env"]["AGENT_VQE_ITERATION"] == "iter_0002"
     assert metrics["selected_strategy"] == "multidim"

@@ -59,7 +59,7 @@
 - `runtime_env`
 - `artifact_paths`
 
-这些字段当前由 `core/evaluator/report.py` 统一写入 `results.jsonl`。
+这些字段当前由 `core/evaluator/report.py` 统一写入 `run.json`，并摘要追加到 `index.jsonl`。
 
 ## 6. 例外情况
 
@@ -73,4 +73,4 @@
 ## 7. 当前缺口
 
 - 还没有一个仓库级的“统一正式 benchmark matrix”脚本自动锁定所有预算。
-- `ResearchSession` 与主 `results.jsonl` 之间仍有字段层面的重复与偏差。
+- `ResearchSession` 与主 `run.json / index.jsonl` 之间仍有字段层面的重复与偏差。

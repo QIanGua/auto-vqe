@@ -9,7 +9,7 @@
 - **2026-03-29**: `core/research/driver.py` 已移除，CLI 与恢复入口统一收口到 `core/research/runtime.py`。
 - **2026-03-29**: `ResearchSession` 已以结构化 `DecisionRecord + RunBundle` 作为主写入路径，`autoresearch.jsonl` 保留兼容视图。
 - **2026-03-29**: 计划同步到重构后的仓库结构，`core/` 已拆分为 `foundation / representation / evaluator / generator / orchestration / research / warmstart`。
-- **2026-03-29**: 确认实验目录规范已迁移到 `artifacts/`，当前 `results.jsonl` schema 为 `1.2`。
+- **2026-03-29**: 确认实验目录规范已迁移到 `artifacts/`，当前 `run.json` 记录沿用 `1.2` 字段集。
 - **2026-03-29**: 确认 `AdaptVQEStrategy` 已有原型与测试，但仍缺少与 GA / MultiDim 并列的标准实验入口。
 - **2026-03-11**: 完成统一日志、策略接口与编排器的第一轮实现。
 
@@ -32,8 +32,8 @@
 - `core/representation/compiler.py`：由结构化 config 构造线路，并估算线路成本。
 - `core/evaluator/`：
   - `training.py`：统一 VQE 优化循环
-  - `report.py`：Markdown 报告与 `results.jsonl`
-  - `logging_utils.py`：`results.tsv` 与文本日志
+  - `report.py`：`run.json` 主记录与可选 Markdown/图像渲染
+  - `logging_utils.py`：`events.jsonl` 与文本日志
   - `api.py`：实验目录创建、多保真评估与晋级辅助
 - `core/generator/`：
   - `strategy.py`：统一策略接口
@@ -54,17 +54,17 @@
 
 - `experiments/tfim/run.py`
 - `experiments/lih/run.py`
-- `experiments/*/ga/search.py`
-- `experiments/*/multidim/search.py`
-- `experiments/*/orchestration/auto_search.py`
+- `experiments/*/run.py search ga`
+- `experiments/*/run.py search multidim`
+- `experiments/*/run.py auto`
 
 输出约定：
 
 - 每次运行生成独立时间戳目录
 - LiH 与 autoresearch 的生成产物集中放入 `artifacts/runs/`
-- TFIM 的默认验证目录当前仍直接落在 `experiments/tfim/`
-- `results.jsonl` 当前 schema 为 `1.2`
-- `experiments/<system>/results.tsv` 保留系统级轻量汇总
+- TFIM 的生成产物也统一放入 `artifacts/runs/`
+- `run.json` 当前记录沿用 `schema_version = 1.2`
+- `experiments/<system>/artifacts/index.jsonl` 保留系统级轻量索引
 
 ## 3. 设计原则
 
@@ -79,7 +79,7 @@
 ### Phase 1：统一日志与基础搜索入口（DONE）
 
 - [x] GA / MultiDim / Baseline 输出对齐
-- [x] `results.jsonl` 与 `results.tsv` 统一
+- [x] 默认实验产物已收束为 `run.json + events.jsonl + run.log`
 - [x] 产出 `best_config_*.json`
 
 ### Phase 2：策略插件化与编排器（DONE）
@@ -114,7 +114,7 @@
 - [x] session pointer 写入 `artifacts/state/`
 - [x] 单 Agent runtime 已拆分为 `agent / policy / executor / interpreter / session / memory_store`
 - [x] `ResearchSession` 已以结构化 decision/run 对象作为主写入路径
-- [ ] `ResearchSession` 与主 `results.jsonl` 的跨文件语义继续对齐
+- [ ] `ResearchSession` 与主 `run.json / index.jsonl` 的跨文件语义继续对齐
 - [ ] keep / discard、hypothesis memory 与跨策略经验继续丰富
 
 ### Phase 5：大规模与迁移验证（FUTURE）

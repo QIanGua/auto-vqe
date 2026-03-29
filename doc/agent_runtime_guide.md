@@ -139,7 +139,7 @@ success, metrics, run = agent.execute_structured_step(iteration=1)
 如果你的目标是“跑项目”：
 
 - 先用 `experiments/*/run.py` 做验证
-- 再用 `experiments/*/ga/search.py` 或 `multidim/search.py` 做结构搜索
+- 再用 `experiments/*/run.py search ga` 或 `experiments/*/run.py search multidim` 做结构搜索
 - 最后用 `core/research/runtime.py` 跑可恢复 Agent 循环
 
 如果你的目标是“改 Agent”：
@@ -151,5 +151,5 @@ success, metrics, run = agent.execute_structured_step(iteration=1)
 ## 8. 当前局限
 
 - `PolicyEngine` 目前仍然是规则驱动，不是 LLM 驱动
-- `ExperimentExecutor` 仍主要兼容现有 shell/search 入口，而不是全量纯 Python 实验 API
+- `ExperimentExecutor` 仍主要兼容当前 CLI 入口，而不是全量纯 Python 实验 API
 - `AdaptVQEStrategy` 已有原型，但还不是与 GA / MultiDim 并列的标准外层研究策略

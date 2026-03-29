@@ -38,7 +38,7 @@ def test_generate_report_minimal(tmp_path):
         "config": {},
     }
 
-    report_path = generate_report(
+    record_path = generate_report(
         exp_dir,
         "TestReport",
         results,
@@ -47,8 +47,11 @@ def test_generate_report_minimal(tmp_path):
         ansatz_spec=ansatz_spec,
     )
 
-    assert os.path.exists(report_path)
-    assert os.path.exists(os.path.join(exp_dir, "results.jsonl"))
+    assert os.path.exists(record_path)
+    assert os.path.exists(os.path.join(exp_dir, "run.json"))
+    assert os.path.exists(os.path.join(exp_dir, "events.jsonl"))
+    pngs = [name for name in os.listdir(exp_dir) if name.startswith("circuit_") and name.endswith(".png")]
+    assert not pngs
 
 
 @pytest.mark.slow
@@ -82,14 +85,16 @@ def test_generate_report_uccsd_uses_tensorcircuit_diagram_pipeline(tmp_path):
         "n_qubits": ENV.n_qubits,
     }
 
-    report_path = generate_report(
+    record_path = generate_report(
         exp_dir,
         "LiH_UCCSD_Test",
         results,
         spec.create_circuit,
         ansatz_spec=spec.to_logging_dict(),
+        render_markdown=True,
+        render_assets=True,
     )
 
-    assert os.path.exists(report_path)
+    assert os.path.exists(record_path)
     pngs = [name for name in os.listdir(exp_dir) if name.startswith("circuit_") and name.endswith(".png")]
     assert pngs
