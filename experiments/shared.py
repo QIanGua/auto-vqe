@@ -19,6 +19,7 @@ class SearchSpec:
     generations: Optional[int] = None
     mutation_rate: Optional[float] = None
     elite_count: Optional[int] = None
+    search_config: Optional[Dict[str, Any]] = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +76,10 @@ class ExperimentManifest:
     notes: Dict[str, Any] = field(default_factory=dict)
 
 
+def _is_structured_ansatz_spec(config: Dict[str, Any]) -> bool:
+    return isinstance(config, dict) and "blocks" in config and "n_qubits" in config
+
+
 def load_best_config(manifest: ExperimentManifest, explicit_path: Optional[str] = None) -> tuple[Dict[str, Any], str]:
     if explicit_path:
         if os.path.exists(explicit_path):
@@ -115,10 +120,15 @@ def run_config_experiment(
     from core.evaluator.logging_utils import log_results, print_results, setup_logger
     from core.evaluator.report import generate_report
     from core.evaluator.training import vqe_train
+    from core.model.schemas import AnsatzSpec
+    from core.representation.compiler import build_circuit_from_ansatz
 
     env = manifest.load_env()
     ansatz_config, config_path = load_best_config(manifest, explicit_config_path)
-    create_circuit, num_params = manifest.build_circuit(ansatz_config)
+    if _is_structured_ansatz_spec(ansatz_config):
+        create_circuit, num_params = build_circuit_from_ansatz(AnsatzSpec(**ansatz_config))
+    else:
+        create_circuit, num_params = manifest.build_circuit(ansatz_config)
     exp_dir = prepare_experiment_dir(manifest.runs_dir, f"{manifest.name}_vqe")
 
     log_path = os.path.join(exp_dir, "run.log")
@@ -249,6 +259,7 @@ def run_baseline_experiment(manifest: ExperimentManifest, *, trials: Optional[in
 
 def run_search_experiment(manifest: ExperimentManifest, strategy_name: str) -> Dict[str, Any]:
     from core.evaluator.api import prepare_experiment_dir
+    from core.generator.adapt import AdaptVQEStrategy, build_fermionic_adapt_pool, build_qubit_adapt_pool
     from core.generator.ga import GASearchStrategy
     from core.generator.grid import ansatz_search
     from core.representation.search_space import generate_config_grid
@@ -284,6 +295,30 @@ def run_search_experiment(manifest: ExperimentManifest, strategy_name: str) -> D
             max_steps=spec.max_steps,
             sub_dir=None,
         )
+    elif spec.kind == "adapt":
+        adapt_cfg = dict(spec.search_config or {})
+        strategy = AdaptVQEStrategy(
+            env=env,
+            operator_pool=build_fermionic_adapt_pool(env, adapt_cfg.get("pool_config")),
+            gradient_epsilon=float(adapt_cfg.get("gradient_epsilon", 1e-3)),
+            gradient_tol=float(adapt_cfg.get("gradient_tol", 1e-4)),
+            max_adapt_steps=int(adapt_cfg.get("max_adapt_steps", 8)),
+        )
+        result = strategy.run()
+    elif spec.kind == "qubit_adapt":
+        adapt_cfg = dict(spec.search_config or {})
+        strategy = AdaptVQEStrategy(
+            env=env,
+            operator_pool=build_qubit_adapt_pool(
+                env.n_qubits,
+                max_body=int(adapt_cfg.get("max_body", 2)),
+                include_single_qubit=bool(adapt_cfg.get("include_single_qubit", True)),
+            ),
+            gradient_epsilon=float(adapt_cfg.get("gradient_epsilon", 1e-3)),
+            gradient_tol=float(adapt_cfg.get("gradient_tol", 1e-4)),
+            max_adapt_steps=int(adapt_cfg.get("max_adapt_steps", 8)),
+        )
+        result = strategy.run()
     else:
         raise ValueError(f"Unknown search kind: {spec.kind}")
 

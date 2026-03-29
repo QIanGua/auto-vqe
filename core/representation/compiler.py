@@ -58,6 +58,48 @@ def _count_two_qubit_params(gate: str) -> int:
     raise ValueError(f"Unknown two-qubit gate: {gate}")
 
 
+_PAULI_MATRICES: Dict[str, np.ndarray] = {
+    "I": np.eye(2, dtype=np.complex64),
+    "X": np.array([[0, 1], [1, 0]], dtype=np.complex64),
+    "Y": np.array([[0, -1j], [1j, 0]], dtype=np.complex64),
+    "Z": np.array([[1, 0], [0, -1]], dtype=np.complex64),
+}
+
+
+def _pauli_tensor(paulis: list[str]) -> np.ndarray:
+    matrix = np.array([[1.0 + 0.0j]], dtype=np.complex64)
+    for pauli in paulis:
+        matrix = np.kron(matrix, _PAULI_MATRICES[pauli.upper()])
+    return matrix.reshape([2] * (2 * len(paulis)))
+
+
+def _parse_pauli_generator(op: OperatorSpec) -> tuple[list[int], list[str]] | None:
+    if "paulis" in op.metadata:
+        support = list(op.support_qubits)
+        paulis = [str(p).upper() for p in op.metadata["paulis"]]
+        if len(support) != len(paulis):
+            raise ValueError(f"Operator {op.name} has mismatched support and paulis")
+        return support, paulis
+
+    if not op.generator:
+        return None
+
+    tokens = str(op.generator).replace(",", " ").split()
+    support: list[int] = []
+    paulis: list[str] = []
+    for token in tokens:
+        if len(token) < 2:
+            continue
+        pauli = token[0].upper()
+        if pauli not in _PAULI_MATRICES:
+            continue
+        support.append(int(token[1:]))
+        paulis.append(pauli)
+    if not support:
+        return None
+    return support, paulis
+
+
 def count_params(config: dict, n_qubits: int) -> int:
     layers = config.get("layers", 1)
     sq_gates = config.get("single_qubit_gates", ["ry"])
@@ -177,6 +219,29 @@ def build_ansatz(config: dict, n_qubits: int) -> tuple[Callable, int]:
 
 
 def _apply_operator(c: Any, op: OperatorSpec, params: Any, idx: int) -> int:
+    if "trotter_terms" in op.metadata:
+        theta = params[idx]
+        for term in op.metadata["trotter_terms"]:
+            support = [int(q) for q in term["support_qubits"]]
+            paulis = [str(p).upper() for p in term["paulis"]]
+            coeff_imag = float(term.get("coeff_imag", 1.0))
+            c.exp1(
+                *support,
+                unitary=_pauli_tensor(paulis),
+                theta=(-coeff_imag) * theta,
+            )
+        return idx + 1
+
+    parsed = _parse_pauli_generator(op)
+    if parsed is not None:
+        support, paulis = parsed
+        c.exp1(
+            *support,
+            unitary=_pauli_tensor(paulis),
+            theta=params[idx],
+        )
+        return idx + 1
+
     tc = _tensorcircuit()
     if hasattr(tc.Circuit, op.name):
         gate_fn = getattr(c, op.name)
@@ -214,7 +279,14 @@ def _apply_block(c: Any, block: BlockSpec, params: Any, idx: int) -> int:
 def build_circuit_from_ansatz(ansatz: AnsatzSpec) -> Tuple[Callable, int]:
     n_qubits = ansatz.n_qubits
     total_params = 0
-    if ansatz.config:
+    config_has_parametric_structure = bool(
+        ansatz.config
+        and any(
+            key in ansatz.config
+            for key in ("layers", "single_qubit_gates", "two_qubit_gate", "entanglement", "param_strategy")
+        )
+    )
+    if config_has_parametric_structure:
         total_params += count_params(ansatz.config, n_qubits)
     for item in ansatz.blocks:
         if isinstance(item, BlockSpec):

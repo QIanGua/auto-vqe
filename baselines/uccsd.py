@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Sequence
 import numpy as np
 
 from . import AnsatzSpec, QuantumEnvironment, _merge_config
+from core.model.schemas import OperatorPoolSpec, OperatorSpec
 
 
 _PAULI_MATRICES: Dict[str, np.ndarray] = {
@@ -175,6 +176,61 @@ def _jw_terms_from_excitation(excitation: Dict[str, Any]) -> List[Dict[str, Any]
     return jw_terms
 
 
+def build_excitation_records(
+    env: QuantumEnvironment,
+    config: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    final_cfg = _merge_config(_default_config_for_env(env), config)
+    occupied, virtual = _resolve_orbitals(final_cfg, env.n_qubits)
+    excitations = _enumerate_excitations(
+        occupied=occupied,
+        virtual=virtual,
+        include_singles=bool(final_cfg.get("include_singles", True)),
+        include_doubles=bool(final_cfg.get("include_doubles", True)),
+    )
+    return [{**excitation, "jw_terms": _jw_terms_from_excitation(excitation)} for excitation in excitations]
+
+
+def build_excitation_operator_pool(
+    env: QuantumEnvironment,
+    config: Dict[str, Any] | None = None,
+) -> OperatorPoolSpec:
+    excitation_records = build_excitation_records(env, config)
+    operators: List[OperatorSpec] = []
+    for excitation in excitation_records:
+        support = sorted(
+            {
+                int(qubit)
+                for term in excitation["jw_terms"]
+                for qubit in term["support_qubits"]
+            }
+        )
+        operators.append(
+            OperatorSpec(
+                name=excitation["label"],
+                family="excitation",
+                support_qubits=support,
+                generator=excitation["label"],
+                symmetry_tags=["particle_number_preserving"],
+                metadata={
+                    "kind": excitation["kind"],
+                    "occupied": list(excitation["occupied"]),
+                    "virtual": list(excitation["virtual"]),
+                    "trotter_terms": excitation["jw_terms"],
+                },
+            )
+        )
+
+    return OperatorPoolSpec(
+        name="fermionic_excitation_pool",
+        operators=operators,
+        metadata={
+            "implementation": "jw_first_order_trotter",
+            "source": "minimal_uccsd_excitation_pool",
+        },
+    )
+
+
 def _build_minimal_uccsd_circuit(
     n_qubits: int,
     hf_qubits: Sequence[int],
@@ -244,19 +300,9 @@ def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) 
         raise ValueError(f"layers must be positive, got {layers}")
 
     occupied, virtual = _resolve_orbitals(final_cfg, n_qubits)
-    excitations = _enumerate_excitations(
-        occupied=occupied,
-        virtual=virtual,
-        include_singles=bool(final_cfg.get("include_singles", True)),
-        include_doubles=bool(final_cfg.get("include_doubles", True)),
-    )
-    if not excitations:
+    excitation_records = build_excitation_records(env, final_cfg)
+    if not excitation_records:
         raise ValueError("Minimal UCCSD baseline generated zero excitations")
-
-    excitation_records: List[Dict[str, Any]] = []
-    for excitation in excitations:
-        jw_terms = _jw_terms_from_excitation(excitation)
-        excitation_records.append({**excitation, "jw_terms": jw_terms})
 
     create_circuit, num_params = _build_minimal_uccsd_circuit(
         n_qubits=n_qubits,
@@ -288,4 +334,4 @@ def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) 
     )
 
 
-__all__ = ["build_ansatz"]
+__all__ = ["build_ansatz", "build_excitation_records", "build_excitation_operator_pool"]

@@ -1,45 +1,65 @@
 """
-ADAPT-VQE style baseline (placeholder).
+ADAPT-VQE initialization helpers.
 
-In a full implementation, ADAPT-VQE would *adaptively* grow the ansatz from a
-pool of operators selected by gradient information. For the purposes of this
-repository, we start with a pragmatic compromise:
+This module no longer pretends ADAPT-VQE is a static UCCSD baseline. Instead it
+provides:
 
-  - reuse the UCCSD-style configuration as the underlying circuit;
-  - tag the resulting `AnsatzSpec` as belonging to the "adapt" family so it
-    can be cleanly separated in ablation studies and papers;
-  - keep the same `build_ansatz(env, config) -> AnsatzSpec` interface so that
-    future work can swap in a true ADAPT builder without changing call sites.
+- an initial reference ansatz suitable for adaptive growth;
+- a fermionic excitation pool for gradient-based operator selection.
 """
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any, Dict
 
-from . import AnsatzSpec, QuantumEnvironment
-from .uccsd import build_ansatz as _uccsd_build_ansatz
+from core.generator.adapt import build_fermionic_adapt_pool
+
+from . import AnsatzSpec, QuantumEnvironment, _merge_config
+
+
+def _default_config_for_env(env: QuantumEnvironment) -> Dict[str, Any]:
+    n_qubits = getattr(env, "n_qubits", 4)
+    hf_qubits = list(range(n_qubits // 2))
+    return {
+        "init_state": "hf" if getattr(env, "name", "").startswith("LiH") else "zero",
+        "hf_qubits": hf_qubits,
+        "occupied_orbitals": hf_qubits,
+        "virtual_orbitals": [q for q in range(n_qubits) if q not in hf_qubits],
+        "include_singles": True,
+        "include_doubles": True,
+    }
 
 
 def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) -> AnsatzSpec:
-    """
-    Build an ADAPT-style ansatz.
+    final_cfg = _merge_config(_default_config_for_env(env), config)
+    def create_circuit(_params: Any):
+        import tensorcircuit as tc
 
-    Currently this is a thin wrapper over the UCCSD-style baseline, with a
-    different `family` / `name` tag. This keeps the public interface stable
-    while leaving room for a future, gradient-driven operator selection loop.
-    """
-    spec = _uccsd_build_ansatz(env, config)
-    # Re-tag without mutating the original spec in case callers keep a copy.
-    adapted = replace(
-        spec,
-        name="adapt",
+        c = tc.Circuit(env.n_qubits)
+        if final_cfg["init_state"] == "hf":
+            for q in final_cfg.get("hf_qubits", []):
+                c.x(q)
+        return c, 0
+
+    return AnsatzSpec(
+        name="adapt_init",
         family="adapt",
+        env_name=env.name,
+        n_qubits=env.n_qubits,
+        create_circuit=create_circuit,
+        num_params=0,
+        config={
+            "init_state": final_cfg["init_state"],
+            "hf_qubits": final_cfg.get("hf_qubits", []),
+        },
+        metadata={
+            "description": "Initial reference state for ADAPT-VQE growth",
+            "research_status": "search_initialized",
+        },
     )
-    adapted.metadata.setdefault("description", "ADAPT-style ansatz (currently UCCSD proxy)")
-    adapted.metadata.setdefault("notes", "TODO: replace with true ADAPT-VQE builder.")
-    return adapted
 
 
-__all__ = ["build_ansatz"]
-
+def build_operator_pool(env: QuantumEnvironment, config: Dict[str, Any] | None = None):
+    final_cfg = _merge_config(_default_config_for_env(env), config)
+    return build_fermionic_adapt_pool(env, final_cfg)
+__all__ = ["build_ansatz", "build_operator_pool"]

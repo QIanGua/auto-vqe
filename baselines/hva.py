@@ -24,11 +24,12 @@ import tensorcircuit as tc
 from . import AnsatzSpec, QuantumEnvironment, _merge_config
 
 
-def _default_config() -> Dict[str, Any]:
+def _default_config(env: QuantumEnvironment) -> Dict[str, Any]:
     # `layers` plays the role of the QAOA depth p.
+    boundary = getattr(env, "boundary", "ring")
     return {
         "layers": 2,
-        "use_ring": True,   # whether to also couple (N-1, 0)
+        "use_ring": boundary == "ring",
     }
 
 
@@ -45,7 +46,7 @@ def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) 
           - `layers`  (int): HVA depth p (default: 2)
           - `use_ring`(bool): include (N-1, 0) ZZ coupling (default: True)
     """
-    cfg = _merge_config(_default_config(), config)
+    cfg = _merge_config(_default_config(env), config)
     p = int(cfg.get("layers", 2))
     use_ring = bool(cfg.get("use_ring", True))
 
@@ -84,9 +85,9 @@ def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) 
         config=cfg,
         metadata={
             "description": "Hamiltonian-Variational Ansatz / QAOA-style architecture",
+            "boundary": "ring" if use_ring else "open",
         },
     )
 
 
 __all__ = ["build_ansatz"]
-

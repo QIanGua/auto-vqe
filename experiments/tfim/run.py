@@ -146,6 +146,22 @@ MANIFEST = ExperimentManifest(
             max_steps=600,
             lr=0.01,
         ),
+        "qubit_adapt": SearchSpec(
+            kind="qubit_adapt",
+            dimensions={},
+            base_exp_name="TFIM_Qubit_ADAPT",
+            run_slug="tfim_qubit_adapt_search",
+            trials_per_config=1,
+            max_steps=200,
+            lr=0.05,
+            search_config={
+                "gradient_epsilon": 1e-3,
+                "gradient_tol": 1e-4,
+                "max_adapt_steps": 6,
+                "max_body": 2,
+                "include_single_qubit": True,
+            },
+        ),
     },
     orchestration=OrchestrationSpec(
         run_slug="tfim_auto_search",

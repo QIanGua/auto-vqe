@@ -1,50 +1,63 @@
 """
-Qubit-ADAPT-VQE style baseline (placeholder).
+Qubit-ADAPT-VQE initialization helpers.
 
-Similar to `baselines.adapt`, this module currently reuses the UCCSD-style
-ansatz as a pragmatic stand-in, but tags the resulting specification as
-belonging to the "qubit-adapt" family.
-
-The unified interface:
-
-    build_ansatz(env, config) -> AnsatzSpec
-
-allows agents and experiment scripts to switch to a fully fledged
-Qubit-ADAPT-VQE implementation in the future without touching call sites.
+This module provides the reference state and qubit-operator pool used by the
+gradient-based Qubit-ADAPT-VQE search.
 """
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any, Dict
 
-from . import AnsatzSpec, QuantumEnvironment
-from .uccsd import build_ansatz as _uccsd_build_ansatz
+from core.generator.adapt import build_qubit_adapt_pool
+
+from . import AnsatzSpec, QuantumEnvironment, _merge_config
+
+
+def _default_config_for_env(env: QuantumEnvironment) -> Dict[str, Any]:
+    n_qubits = getattr(env, "n_qubits", 4)
+    return {
+        "init_state": "hf" if getattr(env, "name", "").startswith("LiH") else "zero",
+        "hf_qubits": list(range(n_qubits // 2)),
+        "max_body": 2,
+        "include_single_qubit": True,
+    }
 
 
 def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) -> AnsatzSpec:
-    """
-    Build a Qubit-ADAPT-style ansatz.
+    final_cfg = _merge_config(_default_config_for_env(env), config)
+    def create_circuit(_params: Any):
+        import tensorcircuit as tc
 
-    Currently a thin wrapper on top of the UCCSD-style baseline with different
-    `name` / `family` tags.
-    """
-    spec = _uccsd_build_ansatz(env, config)
-    qubit_adapt_spec = replace(
-        spec,
-        name="qubit_adapt",
+        c = tc.Circuit(env.n_qubits)
+        if final_cfg["init_state"] == "hf":
+            for q in final_cfg.get("hf_qubits", []):
+                c.x(q)
+        return c, 0
+
+    return AnsatzSpec(
+        name="qubit_adapt_init",
         family="qubit_adapt",
+        env_name=env.name,
+        n_qubits=env.n_qubits,
+        create_circuit=create_circuit,
+        num_params=0,
+        config={
+            "init_state": final_cfg["init_state"],
+            "hf_qubits": final_cfg.get("hf_qubits", []),
+        },
+        metadata={
+            "description": "Initial reference state for Qubit-ADAPT-VQE growth",
+            "research_status": "search_initialized",
+        },
     )
-    qubit_adapt_spec.metadata.setdefault(
-        "description",
-        "Qubit-ADAPT-style ansatz (currently UCCSD proxy)",
-    )
-    qubit_adapt_spec.metadata.setdefault(
-        "notes",
-        "TODO: replace with true Qubit-ADAPT-VQE builder.",
-    )
-    return qubit_adapt_spec
 
 
-__all__ = ["build_ansatz"]
-
+def build_operator_pool(env: QuantumEnvironment, config: Dict[str, Any] | None = None):
+    final_cfg = _merge_config(_default_config_for_env(env), config)
+    return build_qubit_adapt_pool(
+        env.n_qubits,
+        max_body=int(final_cfg.get("max_body", 2)),
+        include_single_qubit=bool(final_cfg.get("include_single_qubit", True)),
+    )
+__all__ = ["build_ansatz", "build_operator_pool"]

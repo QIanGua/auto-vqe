@@ -62,6 +62,7 @@ def test_tfim_search_help_stays_cli_only():
     assert "usage:" in result.stdout.lower()
     assert "ga" in result.stdout.lower()
     assert "multidim" in result.stdout.lower()
+    assert "qubit_adapt" in result.stdout.lower()
 
 
 def test_tfim_baseline_help_stays_cli_only():
@@ -77,6 +78,8 @@ def test_lih_search_help_stays_cli_only():
     assert "usage:" in result.stdout.lower()
     assert "ga" in result.stdout.lower()
     assert "multidim" in result.stdout.lower()
+    assert "adapt" in result.stdout.lower()
+    assert "qubit_adapt" in result.stdout.lower()
 
 
 def test_lih_baseline_help_stays_cli_only():

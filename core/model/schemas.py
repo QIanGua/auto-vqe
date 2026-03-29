@@ -1,6 +1,6 @@
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BlockSpec(BaseModel):
@@ -25,6 +25,7 @@ class OperatorSpec(BaseModel):
     cost_weight: float = 1.0
     symmetry_tags: List[str] = Field(default_factory=list)
     hardware_legal: bool = True
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class OperatorPoolSpec(BaseModel):
@@ -99,9 +100,14 @@ class EvaluationResult(BaseModel):
 class AnsatzSpec(BaseModel):
     """Ansatz 结构规范，支持层级化 Block 和 Operator 构造"""
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     name: str = Field(..., description="Ansatz 唯一标识")
     family: str = Field("hea", description="类别 (hea, uccsd, hva, ga, blocks, etc.)")
     n_qubits: int = Field(..., gt=0, description="量子比特数")
+    env_name: Optional[str] = Field(None, description="环境名称")
+    create_circuit: Optional[Callable[..., Any]] = Field(None, description="可选线路构造器")
+    num_params: int = Field(0, ge=0, description="显式参数量")
     config: Dict[str, Any] = Field(default_factory=dict, description="结构化具体参数 (GA/Grid 兼容)")
     blocks: List[Union[BlockSpec, OperatorSpec]] = Field(default_factory=list, description="有序结构列表")
     growth_history: List[StructureEdit] = Field(default_factory=list, description="生长历史")
@@ -114,7 +120,7 @@ class AnsatzSpec(BaseModel):
         return v
 
     def to_logging_dict(self) -> Dict[str, Any]:
-        return self.model_dump()
+        return self.model_dump(exclude={"create_circuit"}, exclude_none=True)
 
 
 class CandidateSpec(BaseModel):

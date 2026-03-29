@@ -118,3 +118,51 @@ def test_build_ansatz_accepts_torch_params_with_grad():
 
     assert circuit._nqubits == 2
     assert used_params == num_params
+
+
+def test_build_circuit_supports_pauli_exp_operator():
+    ansatz = AnsatzSpec(
+        name="pauli_exp_test",
+        n_qubits=2,
+        blocks=[
+            OperatorSpec(
+                name="Y0_X1",
+                family="pauli_exp",
+                support_qubits=[0, 1],
+                generator="Y0 X1",
+                metadata={"paulis": ["Y", "X"]},
+            )
+        ],
+    )
+    create_fn, num_params = build_circuit_from_ansatz(ansatz)
+    assert num_params == 1
+    c, used = create_fn(np.array([0.1], dtype=np.float32))
+    assert c._nqubits == 2
+    assert used == 1
+
+
+def test_build_circuit_supports_excitation_operator():
+    ansatz = AnsatzSpec(
+        name="excitation_test",
+        n_qubits=4,
+        config={"init_state": "hf", "hf_qubits": [0, 1]},
+        blocks=[
+            OperatorSpec(
+                name="s_0->2",
+                family="excitation",
+                support_qubits=[0, 1, 2],
+                generator="s_0->2",
+                metadata={
+                    "trotter_terms": [
+                        {"support_qubits": [0, 1, 2], "paulis": ["Y", "Z", "X"], "coeff_imag": 0.5},
+                        {"support_qubits": [0, 1, 2], "paulis": ["X", "Z", "Y"], "coeff_imag": -0.5},
+                    ]
+                },
+            )
+        ],
+    )
+    create_fn, num_params = build_circuit_from_ansatz(ansatz)
+    assert num_params == 1
+    c, used = create_fn(np.array([0.2], dtype=np.float32))
+    assert c._nqubits == 4
+    assert used == 1
