@@ -3,22 +3,24 @@ TFIM 遗传算法 (GA) 搜索
 
 不再通过穷举网格，而是通过进化算法在多维空间中寻找最优 ansatz。
 """
+import argparse
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../')))
 
-from core.evaluator.api import prepare_experiment_dir
-from core.generator.ga import GASearchStrategy
-from core.representation.compiler import build_ansatz
-from experiments.tfim.env import ENV
-
-N_QUBITS = ENV.n_qubits
-
 def make_tfim_circuit_fn(config):
-    return build_ansatz(config, N_QUBITS)
+    from core.representation.compiler import build_ansatz
+    from experiments.tfim.env import ENV
+
+    n_qubits = ENV.n_qubits
+    return build_ansatz(config, n_qubits)
 
 def run_ga_search():
+    from core.evaluator.api import prepare_experiment_dir
+    from core.generator.ga import GASearchStrategy
+    from experiments.tfim.env import ENV
+
     # 定义搜索空间的范围
     dimensions = {
         "layers": [1, 2, 3, 4],
@@ -58,5 +60,14 @@ def run_ga_search():
 
     return result
 
-if __name__ == "__main__":
+
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(description="Run TFIM GA ansatz search.")
+
+
+def main() -> None:
+    build_parser().parse_args()
     run_ga_search()
+
+if __name__ == "__main__":
+    main()

@@ -6,30 +6,31 @@ LiH 多维网格搜索 (Multi-Dimensional Grid Search)
 - 能量近似持平时，优先选择参数更少的配置
 """
 
+import argparse
 import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.evaluator.api import prepare_experiment_dir
-from core.generator.grid import ansatz_search
-from core.representation.compiler import build_ansatz
-from core.representation.search_space import generate_config_grid
-from experiments.lih.env import ENV  # type: ignore
-
-
-N_QUBITS = ENV.n_qubits
 HF_QUBITS = [0, 1]
 RUNS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "artifacts", "runs")
 
 
 def make_lih_circuit_fn(config: dict):
+    from core.representation.compiler import build_ansatz
+    from experiments.lih.env import ENV  # type: ignore
+
     if config.get("init_state") == "hf" and "hf_qubits" not in config:
         config = {**config, "hf_qubits": HF_QUBITS}
-    return build_ansatz(config, N_QUBITS)
+    return build_ansatz(config, ENV.n_qubits)
 
 
 def run_multidim_search():
+    from core.evaluator.api import prepare_experiment_dir
+    from core.generator.grid import ansatz_search
+    from core.representation.search_space import generate_config_grid
+    from experiments.lih.env import ENV  # type: ignore
+
     dimensions = {
         "init_state": ["zero", "hf"],
         "layers": [1, 2, 3, 4],
@@ -70,5 +71,14 @@ def run_multidim_search():
 
     return result
 
-if __name__ == "__main__":
+
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(description="Run LiH multidimensional grid ansatz search.")
+
+
+def main() -> None:
+    build_parser().parse_args()
     run_multidim_search()
+
+if __name__ == "__main__":
+    main()

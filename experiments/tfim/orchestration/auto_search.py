@@ -6,21 +6,22 @@ Auto-Search Orchestration Demo (TFIM)
 2. GridSearchStrategy (精扫最优结果附近的邻域)
 """
 
+import argparse
 import os
 import sys
 
 # 将项目根目录加入 sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.orchestration.controller import SearchController, SearchOrchestrator
-from core.evaluator.api import prepare_experiment_dir
-from core.generator.ga import GASearchStrategy
-from core.generator.grid import GridSearchStrategy
-from core.representation.compiler import build_ansatz
-from core.representation.search_space import generate_config_grid
-from experiments.tfim.env import ENV
-
 def run_auto_search():
+    from core.orchestration.controller import SearchController, SearchOrchestrator
+    from core.evaluator.api import prepare_experiment_dir
+    from core.generator.ga import GASearchStrategy
+    from core.generator.grid import GridSearchStrategy
+    from core.representation.compiler import build_ansatz
+    from core.representation.search_space import generate_config_grid
+    from experiments.tfim.env import ENV
+
     base_dir = os.path.dirname(os.path.dirname(__file__))
     exp_dir = prepare_experiment_dir(base_dir, "tfim_auto_search")
     
@@ -80,5 +81,14 @@ def run_auto_search():
     results = orchestrator.run()
     print(f"\nAuto-Search Completed. Executed {len(results)} strategies.")
 
-if __name__ == "__main__":
+
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(description="Run TFIM orchestration auto-search demo.")
+
+
+def main() -> None:
+    build_parser().parse_args()
     run_auto_search()
+
+if __name__ == "__main__":
+    main()

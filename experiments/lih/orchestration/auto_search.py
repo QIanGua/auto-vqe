@@ -6,24 +6,20 @@ Auto-Search Orchestration (LiH)
 2. GridSearchStrategy (精扫：在最有潜力的结构附近进行细致验证)
 """
 
+import argparse
 import os
 import sys
 
 # 将项目根目录加入 sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.orchestration.controller import SearchController, SearchOrchestrator
-from core.evaluator.api import prepare_experiment_dir
-from core.generator.ga import GASearchStrategy
-from core.generator.grid import GridSearchStrategy
-from core.representation.compiler import build_ansatz
-from core.representation.search_space import generate_config_grid
-from experiments.lih.env import ENV
-
 RUNS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "artifacts", "runs")
 
 # LiH 特有的线路构造包装：确保包含必要的 HF 占据轨道配置
 def make_lih_circuit_fn(config):
+    from core.representation.compiler import build_ansatz
+    from experiments.lih.env import ENV
+
     n_qubits = ENV.n_qubits
     hf_qubits = [0, 1] # LiH 在 STO-3G 下 active space 常规设置
     if config.get("init_state") == "hf" and "hf_qubits" not in config:
@@ -31,6 +27,13 @@ def make_lih_circuit_fn(config):
     return build_ansatz(config, n_qubits)
 
 def run_auto_search():
+    from core.orchestration.controller import SearchController, SearchOrchestrator
+    from core.evaluator.api import prepare_experiment_dir
+    from core.generator.ga import GASearchStrategy
+    from core.generator.grid import GridSearchStrategy
+    from core.representation.search_space import generate_config_grid
+    from experiments.lih.env import ENV
+
     exp_dir = prepare_experiment_dir(RUNS_DIR, "lih_auto_search")
     
     # 1. 初始化控制器：设置全局预算和停止规则
@@ -92,5 +95,14 @@ def run_auto_search():
     results = orchestrator.run()
     print(f"\nAuto-Search Completed. Executed {len(results)} strategies.")
 
-if __name__ == "__main__":
+
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(description="Run LiH orchestration auto-search demo.")
+
+
+def main() -> None:
+    build_parser().parse_args()
     run_auto_search()
+
+if __name__ == "__main__":
+    main()

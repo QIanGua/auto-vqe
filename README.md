@@ -56,11 +56,28 @@ Install dependencies:
 uv sync
 ```
 
+Quick CLI-only checks:
+
+```bash
+uv run python experiments/tfim/run.py --help
+uv run python experiments/lih/run.py --help
+uv run python experiments/tfim/ga/search.py --help
+uv run python experiments/tfim/multidim/search.py --help
+uv run python experiments/lih/ga/search.py --help
+uv run python experiments/lih/multidim/search.py --help
+uv run python experiments/tfim/orchestration/auto_search.py --help
+uv run python experiments/lih/orchestration/auto_search.py --help
+uv run python core/research/runtime.py --help
+uv run python core/molecular/generate.py --list
+```
+
 ## How To Use The Project
 
 ### 1. Run a normal verification experiment
 
 Use this when you want to evaluate one config or the default best-known config for a system.
+
+These commands start real optimization runs.
 
 ```bash
 uv run python experiments/tfim/run.py
@@ -76,6 +93,8 @@ uv run python experiments/lih/run.py --config experiments/lih/multidim/best_conf
 
 ### 2. Run structural search
 
+These commands start real search jobs and can take substantial time.
+
 ```bash
 uv run python experiments/tfim/ga/search.py
 uv run python experiments/tfim/multidim/search.py
@@ -83,11 +102,27 @@ uv run python experiments/lih/ga/search.py
 uv run python experiments/lih/multidim/search.py
 ```
 
+CLI-only smoke:
+
+```bash
+uv run python experiments/tfim/ga/search.py --help
+uv run python experiments/lih/multidim/search.py --help
+```
+
 ### 3. Run orchestrated search demos
+
+These also launch real search/evaluation work rather than a smoke test.
 
 ```bash
 uv run python experiments/tfim/orchestration/auto_search.py
 uv run python experiments/lih/orchestration/auto_search.py
+```
+
+CLI-only smoke:
+
+```bash
+uv run python experiments/tfim/orchestration/auto_search.py --help
+uv run python experiments/lih/orchestration/auto_search.py --help
 ```
 
 ### 4. Run the Agent outer-loop research runtime
@@ -98,6 +133,13 @@ Use this when you want the project to keep session memory, resume across runs, a
 uv run python core/research/runtime.py --dir experiments/lih --strategy ga --target 1e-6 --max 100
 uv run python core/research/runtime.py --dir experiments/lih --strategy multidim --target 1e-6 --max 100
 uv run python core/research/runtime.py --dir experiments/tfim --strategy ga --target 1e-6 --max 50
+```
+
+CLI-only smoke or zero-work check:
+
+```bash
+uv run python core/research/runtime.py --help
+uv run python core/research/runtime.py --dir experiments/tfim --strategy ga --target 1e-6 --max 0
 ```
 
 ### 5. Generate molecular Hamiltonian datasets from the shared core layer
@@ -129,6 +171,13 @@ The default output path is:
 
 ```text
 artifacts/molecular/<system>_pyscf_data.json
+```
+
+CLI-only smoke:
+
+```bash
+uv run python core/molecular/generate.py --help
+uv run python core/molecular/generate.py --list
 ```
 
 ## How To Use The Agent
@@ -185,11 +234,25 @@ uv run python experiments/tfim/run.py
 uv run python experiments/lih/run.py
 ```
 
+CLI-only smoke:
+
+```bash
+uv run python experiments/tfim/run.py --help
+uv run python experiments/lih/run.py --help
+```
+
 Run search:
 
 ```bash
 uv run python experiments/tfim/ga/search.py
 uv run python experiments/lih/multidim/search.py
+```
+
+CLI-only smoke:
+
+```bash
+uv run python experiments/tfim/ga/search.py --help
+uv run python experiments/lih/multidim/search.py --help
 ```
 
 Run Agent runtime:
@@ -198,11 +261,23 @@ Run Agent runtime:
 uv run python core/research/runtime.py --dir experiments/lih --strategy ga --target 1e-6 --max 100
 ```
 
+CLI-only smoke:
+
+```bash
+uv run python core/research/runtime.py --help
+```
+
 Run molecular dataset generation:
 
 ```bash
 uv run python core/molecular/generate.py --system lih
 uv run python core/molecular/generate.py --system h2 --grid 0.5,0.74,1.0
+```
+
+CLI-only smoke:
+
+```bash
+uv run python core/molecular/generate.py --list
 ```
 
 Run tests:

@@ -6,26 +6,20 @@ TFIM 多维网格搜索 (Multi-Dimensional Grid Search)
 - 能量近似持平时，优先选择参数更少的配置
 """
 
+import argparse
 import os
 import sys
 # 将项目根目录加入 sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.evaluator.api import prepare_experiment_dir
-from core.generator.grid import ansatz_search
-from core.representation.compiler import build_ansatz
-from core.representation.search_space import generate_config_grid
-from experiments.tfim.env import ENV  # type: ignore
-
-
-N_QUBITS = ENV.n_qubits
-
-
 def make_tfim_circuit_fn(config: dict):
     """
     为 TFIM 构造 (create_circuit_fn, num_params)。
     """
-    return build_ansatz(config, N_QUBITS)
+    from core.representation.compiler import build_ansatz
+    from experiments.tfim.env import ENV
+
+    return build_ansatz(config, ENV.n_qubits)
 
 
 def run_multidim_search():
@@ -33,6 +27,11 @@ def run_multidim_search():
     在多维配置网格上进行穷举搜索，并将最优配置写入：
     - experiments/tfim/multidim/best_config_multidim.json
     """
+    from core.evaluator.api import prepare_experiment_dir
+    from core.generator.grid import ansatz_search
+    from core.representation.search_space import generate_config_grid
+    from experiments.tfim.env import ENV  # type: ignore
+
     # 主要考察层数 / 拓扑 / 门集合这三大维度
     dimensions = {
         "layers": [1, 2, 3, 4],
@@ -70,5 +69,14 @@ def run_multidim_search():
     return result
 
 
-if __name__ == "__main__":
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(description="Run TFIM multidimensional grid ansatz search.")
+
+
+def main() -> None:
+    build_parser().parse_args()
     run_multidim_search()
+
+
+if __name__ == "__main__":
+    main()

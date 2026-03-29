@@ -3,28 +3,31 @@ LiH 遗传算法 (GA) 搜索
 
 利用进化算法在化学 ansatz 空间中高效搜索。
 """
+import argparse
 import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.evaluator.api import prepare_experiment_dir
-from core.generator.ga import GASearchStrategy
-from core.representation.compiler import build_ansatz
-from experiments.lih.env import ENV
-
-N_QUBITS = ENV.n_qubits
 HF_QUBITS = [0, 1]
 RUNS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "artifacts", "runs")
 
 
 def make_lih_circuit_fn(config):
+    from core.representation.compiler import build_ansatz
+    from experiments.lih.env import ENV
+
+    n_qubits = ENV.n_qubits
     if config.get("init_state") == "hf" and "hf_qubits" not in config:
         config = {**config, "hf_qubits": HF_QUBITS}
-    return build_ansatz(config, N_QUBITS)
+    return build_ansatz(config, n_qubits)
 
 
 def run_ga_search():
+    from core.evaluator.api import prepare_experiment_dir
+    from core.generator.ga import GASearchStrategy
+    from experiments.lih.env import ENV
+
     dimensions = {
         "init_state": ["zero", "hf"],
         "layers": [2, 3, 4, 5],
@@ -69,5 +72,14 @@ def run_ga_search():
     return result
 
 
-if __name__ == "__main__":
+def build_parser() -> argparse.ArgumentParser:
+    return argparse.ArgumentParser(description="Run LiH GA ansatz search.")
+
+
+def main() -> None:
+    build_parser().parse_args()
     run_ga_search()
+
+
+if __name__ == "__main__":
+    main()
