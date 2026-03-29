@@ -1,7 +1,7 @@
 """
 Hardware-Efficient Ansatz (HEA) baseline.
 
-This wraps the generic `core.circuit_factory.build_ansatz` helper and chooses
+This wraps the generic `core.representation.compiler.build_ansatz` helper and chooses
 reasonable defaults per environment, while still allowing callers to override
 any field via the `config` dict.
 
@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from core.circuit_factory import build_ansatz as cf_build_ansatz
+from core.representation.compiler import build_ansatz as cf_build_ansatz
 
 from . import AnsatzSpec, QuantumEnvironment, _merge_config
 
@@ -92,10 +92,9 @@ def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) 
         num_params=num_params,
         config=final_cfg,
         metadata={
-            "description": "Hardware-efficient ansatz built via core.circuit_factory",
+            "description": "Hardware-efficient ansatz built via core.representation.compiler",
         },
     )
 
 
 __all__ = ["build_ansatz"]
-

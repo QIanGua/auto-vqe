@@ -1,7 +1,7 @@
 import json
-from pathlib import Path
 
-from core import research_driver
+from core.research import runtime as research_runtime
+from core.research.session import ResearchSession
 
 
 class DummyProcess:
@@ -10,22 +10,6 @@ class DummyProcess:
 
     def wait(self):
         return 0
-
-
-class DummySession:
-    def __init__(self, jsonl_path):
-        self.jsonl_path = str(jsonl_path)
-        self.logged = None
-        self.updated = None
-
-    def get_best_performance(self):
-        return float("inf")
-
-    def log_decision(self, **kwargs):
-        self.logged = kwargs
-
-    def update_brain(self, **kwargs):
-        self.updated = kwargs
 
 
 def test_run_iteration_parses_string_metrics_and_uses_selected_config(tmp_path, monkeypatch):
@@ -52,7 +36,6 @@ def test_run_iteration_parses_string_metrics_and_uses_selected_config(tmp_path, 
         f"METRIC selected_config_path={selected_config_path}\n",
     ]
 
-    session = DummySession(tmp_path / "autoresearch.jsonl")
     captured = {}
 
     def fake_popen(cmd, **kwargs):
@@ -60,11 +43,12 @@ def test_run_iteration_parses_string_metrics_and_uses_selected_config(tmp_path, 
         captured["env"] = kwargs["env"]
         return DummyProcess(lines)
 
-    monkeypatch.setattr(research_driver.subprocess, "Popen", fake_popen)
+    monkeypatch.setattr("core.research.agent.subprocess.Popen", fake_popen)
 
     session_dir = tmp_path / "session"
     session_dir.mkdir()
-    success, metrics = research_driver.run_iteration(
+    session = ResearchSession(str(system_dir), str(session_dir))
+    success, metrics = research_runtime.run_iteration(
         str(system_dir),
         2,
         session,
@@ -78,54 +62,53 @@ def test_run_iteration_parses_string_metrics_and_uses_selected_config(tmp_path, 
     assert captured["env"]["AGENT_VQE_ITERATION"] == "iter_0002"
     assert metrics["selected_strategy"] == "multidim"
     assert metrics["selected_config_path"] == str(selected_config_path)
-    assert session.logged is not None
-    assert session.logged["results"]["selected_strategy"] == "multidim"
-    assert session.updated is not None
-    assert session.updated["best_config"] == expected_config
+    memory = session.store.load()
+    assert memory.best_energy_error == 0.00042
+    assert memory.strategy_stats["multidim"]["keeps"] == 1
+    assert session.jsonl_path is not None
 
 
-def test_start_driver_resumes_from_latest_iteration(monkeypatch):
-    called = []
-    tmp_root = Path.cwd() / "tmp_test_research_driver_session"
-    tmp_root.mkdir(exist_ok=True)
-
-    class ResumeSession:
-        def __init__(self, system_dir, state_dir=None):
-            self.system_dir = system_dir
-            self.state_dir = state_dir
-
-        def get_best_performance(self):
-            return 1.0
-
-        def get_latest_iteration(self):
-            return 3
-
-    def fake_run_iteration(system_dir, iteration, session, strategy, session_dir=None, log_path=None):
-        called.append((iteration, strategy, session_dir, log_path))
-        return False, {}
-
-    monkeypatch.setattr(research_driver, "ResearchSession", ResumeSession)
-    monkeypatch.setattr(research_driver, "run_iteration", fake_run_iteration)
-
+def test_start_driver_resumes_from_latest_iteration(monkeypatch, tmp_path):
+    called = {}
     def fake_resolve_session_dir(system_dir, strategy):
-        session_dir = tmp_root / f"{strategy}_session"
+        session_dir = tmp_path / f"{strategy}_session"
         session_dir.mkdir(parents=True, exist_ok=True)
         return str(session_dir)
 
-    monkeypatch.setattr(research_driver, "resolve_session_dir", fake_resolve_session_dir)
+    monkeypatch.setattr(research_runtime, "resolve_session_dir", fake_resolve_session_dir)
 
-    research_driver.start_driver_with_strategy(
+    class DummyAgent:
+        def __init__(self, **kwargs):
+            called["kwargs"] = kwargs
+
+        def run_until_stop(self, *, start_iteration, max_loops, target_error, emit):
+            called["run"] = (start_iteration, max_loops, target_error, emit)
+            return []
+
+    monkeypatch.setattr(research_runtime, "create_default_research_agent", lambda **kwargs: DummyAgent(**kwargs))
+
+    research_runtime.start_driver_with_strategy(
         "experiments/lih",
         strategy="ga",
         target_error=1e-6,
         max_loops=5,
     )
 
-    assert called == [
-        (
-            4,
-            "ga",
-            str(tmp_root / "ga_session"),
-            str(tmp_root / "ga_session" / "driver.log"),
-        )
-    ]
+    assert called["kwargs"]["session_dir"] == str(tmp_path / "ga_session")
+    assert called["kwargs"]["log_path"] == str(tmp_path / "ga_session" / "driver.log")
+    assert called["run"][:3] == (1, 5, 1e-6)
+
+
+def test_runtime_resolve_session_dir_reuses_existing_pointer(tmp_path):
+    system_dir = tmp_path / "experiments" / "lih"
+    strategy = "ga"
+    state_dir = system_dir / "artifacts" / "state"
+    state_dir.mkdir(parents=True)
+    existing = tmp_path / "existing_session"
+    existing.mkdir()
+    pointer = state_dir / f"current_autoresearch_{strategy}_session"
+    pointer.write_text(str(existing), encoding="utf-8")
+
+    resolved = research_runtime.resolve_session_dir(str(system_dir), strategy)
+
+    assert resolved == str(existing)

@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from core.schemas import AnsatzSpec, BlockSpec, OperatorSpec
-from core.parameter_mapper import ParameterMapper
+from core.model.schemas import AnsatzSpec, BlockSpec, OperatorSpec
+from core.warmstart.ansatz_mapper import ParameterMapper
 
 def test_parameter_mapper_identity():
     mapper = ParameterMapper()

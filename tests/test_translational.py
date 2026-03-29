@@ -5,7 +5,7 @@ import sys
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
-from core.circuit_factory import count_params, build_ansatz
+from core.representation.compiler import build_ansatz, count_params
 
 def test_translational_param_count():
     """测试 translational 降维策略的参数计算与线路构建逻辑"""

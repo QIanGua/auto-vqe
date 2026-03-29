@@ -44,13 +44,8 @@
 
 ## 4. 结果可视化
 
-### 4.1 收敛曲线 (Config 24/36)
-![TFIM Convergence Curve](convergence_20260310_212802.png)
-*训练过程展示了稳定的单调下降规律，且在后期表现出极强的数值稳定性。*
-
-### 4.2 最终 Ansatz 线路图
-![TFIM Circuit Diagram](circuit_20260310_212802.png)
-*该 3 层 12 参数线路是 TFIM 任务的黄金范式。*
+### 4.1 历史可视化说明
+早期的收敛曲线与线路图产物已从源码目录中移出。若需要图像，请重新运行 `search.py`，并在新生成的实验目录中查看 `convergence_*.png` 与 `circuit_*.png`。
 
 ---
 

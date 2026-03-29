@@ -4,7 +4,7 @@ import os
 
 # 将项目根目录添加到路径中以防万一
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from core.base_env import QuantumEnvironment
+from core.foundation.base_env import QuantumEnvironment
 
 class TFIMEnvironment(QuantumEnvironment):
     def __init__(self, n_qubits=4, use_mps=False):

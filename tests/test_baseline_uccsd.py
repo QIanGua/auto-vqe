@@ -1,7 +1,7 @@
 import numpy as np
 
 from baselines.uccsd import build_ansatz
-from core.base_env import QuantumEnvironment
+from core.foundation.base_env import QuantumEnvironment
 
 
 def test_minimal_uccsd_default_excitation_structure():

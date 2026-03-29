@@ -8,7 +8,7 @@ import tensorcircuit as tc
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 
 from experiments.tfim.env import TFIMEnvironment
-from core.circuit_factory import build_ansatz
+from core.representation.compiler import build_ansatz
 
 @pytest.mark.slow
 def test_mps_statevector_consistency():

@@ -14,7 +14,10 @@ import torch
 # 将项目根目录添加到路径中
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.engine import vqe_train, print_results, setup_logger, log_results, generate_report
+from core.evaluator.api import prepare_experiment_dir
+from core.evaluator.logging_utils import log_results, print_results, setup_logger
+from core.evaluator.report import generate_report
+from core.evaluator.training import vqe_train
 from experiments.tfim.env import ENV
 from baselines.hea import build_ansatz as build_hea
 
@@ -39,7 +42,6 @@ def run_baseline(trials: int = 5):
     """
     在固定 Baseline 配置上运行多次 VQE，并记录最优结果。
     """
-    from core.engine import prepare_experiment_dir
     base_dir = os.path.dirname(__file__)
     exp_dir = prepare_experiment_dir(base_dir, "tfim_baseline")
 

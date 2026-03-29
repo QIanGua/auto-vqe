@@ -8,7 +8,7 @@ same minimal interface:
     build_ansatz(env, config) -> AnsatzSpec
 
 where:
-  - `env`   is a `core.base_env.QuantumEnvironment` instance
+  - `env`   is a `core.foundation.base_env.QuantumEnvironment` instance
   - `config` is a (possibly partial) configuration dict used to override
     sensible defaults for the given baseline family.
 
@@ -24,7 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Mapping
 
-from core.base_env import QuantumEnvironment
+from core.foundation.base_env import QuantumEnvironment
 
 
 CircuitBuilder = Callable[[Any], tuple[Any, int]]
@@ -97,4 +97,3 @@ __all__ = [
     "_merge_config",
     "QuantumEnvironment",
 ]
-

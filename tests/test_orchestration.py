@@ -1,7 +1,7 @@
 import pytest
 import time
 from unittest.mock import MagicMock
-from core.controller import SearchController, SearchOrchestrator
+from core.orchestration.controller import SearchController, SearchOrchestrator
 
 def test_controller_max_runs():
     controller = SearchController(max_runs=2)
@@ -52,7 +52,7 @@ def test_orchestrator_switching():
     
     # Simulate strategy1 signaling finished after one step
     controller = SearchController(max_runs=10)
-    orchestrator = SearchOrchestrator(strategies=[mock_strategy1, mock_strategy2], controller=controller)
+    orchestrator = SearchOrchestrator(generators=[mock_strategy1, mock_strategy2], controller=controller)
     
     orchestrator.run()
     
@@ -66,7 +66,7 @@ def test_orchestrator_stop_propagation():
     mock_strategy2.name = "Strategy2"
     
     controller = SearchController(max_runs=1)
-    orchestrator = SearchOrchestrator(strategies=[mock_strategy1, mock_strategy2], controller=controller)
+    orchestrator = SearchOrchestrator(generators=[mock_strategy1, mock_strategy2], controller=controller)
     
     # After 1st strategy, budget is reached
     mock_strategy1.run.side_effect = lambda: controller.report_result({"val_energy": -1.0, "num_params": 10})

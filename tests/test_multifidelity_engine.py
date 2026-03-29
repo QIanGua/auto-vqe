@@ -1,8 +1,9 @@
 import pytest
 import numpy as np
-from core.schemas import AnsatzSpec, CandidateSpec, EvaluationSpec
-from core.engine import optimize_parameters, evaluate_candidate, promote_candidate
-from core.base_env import QuantumEnvironment
+from core.model.schemas import AnsatzSpec, CandidateSpec, EvaluationSpec
+from core.evaluator.api import evaluate_candidate, promote_candidate
+from core.evaluator.training import optimize_parameters
+from core.foundation.base_env import QuantumEnvironment
 
 class MockEnv:
     def __init__(self, n_qubits=2):
@@ -27,21 +28,48 @@ class MockEnv:
 
 def test_optimize_parameters():
     env = MockEnv()
-    ansatz = AnsatzSpec(name="test", n_qubits=2, config={"layers": 1})
-    from core.schemas import OptimizerSpec
+    from core.model.schemas import OptimizerSpec
     opt_spec = OptimizerSpec(max_steps=10)
-    
-    results = optimize_parameters(env, ansatz, opt_spec)
+
+    def mock_create_circuit(params):
+        return object(), len(params)
+
+    def mock_compute_energy(params):
+        import torch
+
+        return params.sum() * 0 + torch.tensor(-1.0, requires_grad=True)
+
+    results = optimize_parameters(
+        env,
+        ansatz=None,
+        optimizer_spec=opt_spec,
+        create_circuit_fn=mock_create_circuit,
+        compute_energy_fn=mock_compute_energy,
+        num_params=2,
+    )
     assert "val_energy" in results
     assert results["actual_steps"] <= 10
     assert len(results["final_params"]) > 0
 
-def test_evaluate_candidate():
+def test_evaluate_candidate(monkeypatch):
     env = MockEnv()
     ansatz = AnsatzSpec(name="test", n_qubits=2, config={"layers": 1})
     candidate = CandidateSpec(candidate_id="c1", ansatz=ansatz, proposed_by="test")
     eval_spec = EvaluationSpec(fidelity="quick", max_steps=5)
-    
+
+    monkeypatch.setattr(
+        "core.evaluator.training.optimize_parameters",
+        lambda **kwargs: {
+            "val_energy": -1.0,
+            "num_params": 2,
+            "actual_steps": 3,
+        },
+    )
+    monkeypatch.setattr(
+        "core.representation.compiler.estimate_circuit_cost",
+        lambda ansatz: {"two_qubit_gates": 0},
+    )
+
     result = evaluate_candidate(env, candidate, eval_spec)
     assert result.candidate_id == "c1"
     assert result.fidelity == "quick"
@@ -49,7 +77,7 @@ def test_evaluate_candidate():
 
 def test_promote_candidate():
     # Mock a previous result
-    from core.schemas import EvaluationResult
+    from core.model.schemas import EvaluationResult
     prev = EvaluationResult(
         candidate_id="c1", fidelity="quick", success=True, 
         val_energy=-0.8, num_params=2, two_qubit_gates=1, 

@@ -1,14 +1,14 @@
 import pytest
 import logging
-from core.schemas import CandidateSpec, EvaluationResult, AnsatzSpec
-from core.controller import SearchOrchestrator, SearchController
+from core.model.schemas import CandidateSpec, EvaluationResult, AnsatzSpec
+from core.orchestration.controller import SearchController, SearchOrchestrator
 
 def test_orchestrator_promotion():
     ansatz = AnsatzSpec(name="a1", n_qubits=2)
     cand1 = CandidateSpec(candidate_id="c1", ansatz=ansatz, proposed_by="test")
     cand2 = CandidateSpec(candidate_id="c2", ansatz=ansatz, proposed_by="test")
     
-    orchestrator = SearchOrchestrator(strategies=[])
+    orchestrator = SearchOrchestrator(generators=[])
     orchestrator.submit_candidates([cand1, cand2], fidelity="quick")
     
     # Mock results

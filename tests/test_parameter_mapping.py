@@ -1,6 +1,6 @@
 import torch
 import pytest
-from core.parameter_mapping import IdentityMapper
+from core.warmstart.config_mapper import IdentityMapper
 
 def test_identity_mapper_layer_addition():
     mapper = IdentityMapper()

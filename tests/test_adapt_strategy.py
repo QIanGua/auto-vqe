@@ -1,10 +1,10 @@
 import pytest
 import numpy as np
-from core.schemas import (
+from core.model.schemas import (
     AnsatzSpec, OperatorSpec, OperatorPoolSpec, 
     StrategyCheckpoint, EvaluationResult
 )
-from core.adapt_vqe import AdaptVQEStrategy
+from core.generator.adapt import AdaptVQEStrategy
 
 class MockEnv:
     def __init__(self):
@@ -41,5 +41,5 @@ def test_adapt_vqe_update():
     
     new_state = strategy.update(state, [res])
     assert new_state.step_count == 1
-    assert new_state.best_energy == -0.5
+    assert new_state.best_score == -0.5
     assert new_state.best_candidate_id == "c1"

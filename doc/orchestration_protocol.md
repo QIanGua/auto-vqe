@@ -1,6 +1,7 @@
 # Agent-VQE 编排协议 (Orchestration Protocol)
 
-> **版本**: 1.0 (P1)  
+> **版本**: 1.2  
+> **实现位置**: `core/orchestration/controller.py`  
 > **目标**: 明确 `SearchOrchestrator` 与 `SearchController` 之间的行为契约，确保自动搜索过程的可解释性、鲁棒性与一致性。
 
 ---
@@ -17,8 +18,8 @@
 - **空间缩减**: 当全局 `consecutive_failures` 达到 `failure_limit` 时，触发 `on_space_reduction` 信号，建议缩小搜索空间或切换到更保守的策略。
 
 ### 1.3 Resume 语义 (Resumption)
-- **检查点**: 每一轮实验产出的 `results.jsonl` 应包含完整的 `config` 和 `final_params`。
-- **断点续跑**: 理想情况下，Orchestrator 应支持加载 `results.jsonl` 跳过已运行的配置。
+- **运行目录**: 编排器驱动的实验应落在独立时间戳目录内，便于恢复与审计。
+- **当前恢复方式**: 更长周期的恢复目前主要由 `core/research/runtime.py` + `ResearchSession` 承担，而不是 `SearchOrchestrator` 直接消费 `results.jsonl`。
 
 ---
 
@@ -36,7 +37,9 @@
 
 ---
 
-## 3. 下一步增强计划
+## 3. 当前状态与下一步
 
-- [ ] 实现 `CheckpointedOrchestrator` 支持长实验恢复。
-- [ ] 为不同策略（GA, Grid, Bayesian）提供统一的 `MetricScanner`。
+- [x] `SearchController` 已负责预算、失败计数与无改进判定。
+- [x] `SearchOrchestrator` 已在 TFIM / LiH demo 中使用。
+- [ ] 若要支持更强的长实验恢复，仍需补一个面向编排器本身的 checkpoint 层。
+- [ ] 若引入更多策略（例如 Bayesian / RL），需要统一的跨策略指标扫描与晋级接口。

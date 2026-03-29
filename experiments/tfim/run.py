@@ -1,19 +1,33 @@
 import os
 import sys
-import torch
+import argparse
+import json
 
 # 将项目根目录添加到路径中
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
-from core.engine import vqe_train, print_results, setup_logger, log_results, generate_report, tc
-from core.circuit_factory import build_ansatz
-from experiments.tfim.env import ENV
 
-N_QUBITS = ENV.n_qubits
-EXACT_ENERGY = ENV.exact_energy
+def _load_runtime_dependencies():
+    import torch
 
-import argparse
-import json
+    from core.evaluator.api import prepare_experiment_dir
+    from core.evaluator.logging_utils import log_results, print_results, setup_logger
+    from core.evaluator.report import generate_report
+    from core.evaluator.training import vqe_train
+    from core.representation.compiler import build_ansatz
+    from experiments.tfim.env import ENV
+
+    return {
+        "torch": torch,
+        "prepare_experiment_dir": prepare_experiment_dir,
+        "log_results": log_results,
+        "print_results": print_results,
+        "setup_logger": setup_logger,
+        "generate_report": generate_report,
+        "vqe_train": vqe_train,
+        "build_ansatz": build_ansatz,
+        "ENV": ENV,
+    }
 
 # ---- 配置加载逻辑 (优先级: CLI > GA > MultiDim > Fallback) ----
 def load_best_config(explicit_path=None):
@@ -54,11 +68,20 @@ def load_best_config(explicit_path=None):
     }, "fallback_default"
 
 def run_experiment(trials=5, explicit_config_path=None):
-    from core.engine import prepare_experiment_dir
-    
+    runtime = _load_runtime_dependencies()
+    torch = runtime["torch"]
+    build_ansatz = runtime["build_ansatz"]
+    prepare_experiment_dir = runtime["prepare_experiment_dir"]
+    setup_logger = runtime["setup_logger"]
+    print_results = runtime["print_results"]
+    log_results = runtime["log_results"]
+    generate_report = runtime["generate_report"]
+    vqe_train = runtime["vqe_train"]
+    env = runtime["ENV"]
+
     # Load config inside run_experiment to support CLI override
     ansatz_config, config_path = load_best_config(explicit_config_path)
-    create_circuit, num_params = build_ansatz(ansatz_config, N_QUBITS)
+    create_circuit, num_params = build_ansatz(ansatz_config, env.n_qubits)
     
     base_dir = os.path.dirname(__file__)
     exp_dir = prepare_experiment_dir(base_dir, "tfim_vqe")
@@ -70,14 +93,14 @@ def run_experiment(trials=5, explicit_config_path=None):
     logger.info(f"Config Source: {config_path}")
     logger.info(f"Config Content: {ansatz_config}")
     logger.info(f"Total Params: {num_params}")
-    logger.info(f"Target Energy: {EXACT_ENERGY:.6f}")
+    logger.info(f"Target Energy: {env.exact_energy:.6f}")
     
     best_results = None
     overall_best_energy = float('inf')
     
     def compute_energy_fn(params):
         c, _ = create_circuit(params)
-        return ENV.compute_energy(c)
+        return env.compute_energy(c)
         
     for i in range(trials):
         logger.info(f"\n--- Trial {i+1}/{trials} ---")
@@ -86,8 +109,8 @@ def run_experiment(trials=5, explicit_config_path=None):
         results = vqe_train(
             create_circuit_fn=create_circuit,
             compute_energy_fn=compute_energy_fn,
-            n_qubits=N_QUBITS,
-            exact_energy=EXACT_ENERGY,
+            n_qubits=env.n_qubits,
+            exact_energy=env.exact_energy,
             num_params=num_params,
             max_steps=1500,
             lr=0.01,
@@ -118,5 +141,5 @@ if __name__ == "__main__":
     parser.add_argument("--config", type=str, help="Path to explicit ansatz config JSON.")
     parser.add_argument("--trials", type=int, default=5, help="Number of trials with different seeds.")
     args = parser.parse_args()
-    
+
     run_experiment(trials=args.trials, explicit_config_path=args.config)

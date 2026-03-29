@@ -1,6 +1,6 @@
 import os
 
-from core.circuit_drawer import compact_gate_columns, render_circuit_diagram
+from core.rendering.circuit_drawer import compact_gate_columns, render_circuit_diagram
 
 
 def test_compact_gate_columns_reuses_free_columns():

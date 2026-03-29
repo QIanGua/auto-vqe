@@ -9,8 +9,9 @@ import datetime
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from core.engine import vqe_train, generate_report
-from core.circuit_factory import build_ansatz
+from core.evaluator.report import generate_report
+from core.evaluator.training import vqe_train
+from core.representation.compiler import build_ansatz
 
 def test_audit_logging():
     print("Starting Audit Logging Smoke Test...")

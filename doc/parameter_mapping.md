@@ -1,7 +1,7 @@
 # Agent-VQE 参数映射协议 (Parameter Mapping Protocol)
 
-> **版本**: 1.0 (P1)  
-> **状态**: 草案  
+> **版本**: 1.2  
+> **状态**: 当前约定  
 > **目标**: 明确在 Ansatz 结构演进（新增层、删除层、门替换、拓扑变化）时，已有参数如何继承、初始化或失效，以确保 Warm-start 的科学性。
 
 ---
@@ -9,7 +9,7 @@
 ## 1. 核心原则
 
 1.  **最大化保留 (Maximal Preservation)**: 如果局部结构未变，对应的参数值应当被精确保留。
-2.  **局部局部性 (Locality)**: 结构变化的影响应尽可能局限于变化点，不应导致全线路参数随机化。
+2.  **局部性 (Locality)**: 结构变化的影响应尽可能局限于变化点，不应导致全线路参数随机化。
 3.  **显式标记**: 任何参数映射行为必须在日志中记录映射类型（如 `identity`, `padding`, `interpolation`）。
 
 ---
@@ -31,20 +31,18 @@
 
 ---
 
-## 3. 实现接口 (Proposed API)
+## 3. 当前实现位置
 
-```python
-class ParameterMapper:
-    def map(self, old_config: dict, old_params: Tensor, new_config: dict) -> Tensor:
-        """
-        根据配置差异，将旧参数映射到新维度空间。
-        """
-        pass
-```
+- 配置级映射：`core/warmstart/config_mapper.py`
+- Ansatz 参数映射：`core/warmstart/ansatz_mapper.py`
+- 相关测试：`tests/test_parameter_mapper.py`、`tests/test_parameter_mapping.py`
 
 ---
 
-## 4. 下一步运行建议
+## 4. 当前状态与后续增强
 
-- 在 `Phase 3` 实现 `IdentityMapper` 作为基准。
+- 当前实现已经覆盖配置级和 ansatz 级映射。
+- 现有测试覆盖了 identity preservation、层数扩展和基础兼容性。
+
+- 继续扩展 `IdentityMapper` 之外的映射策略。
 - 为 `ADAPT-VQE` 提供专门的 `GradientPriorityMapper`。

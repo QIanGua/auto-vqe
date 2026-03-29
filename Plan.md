@@ -1,176 +1,139 @@
 # Agent-VQE 开发计划（Plan）
 
-> 版本：2026-03-11  
-> 目标读者：项目维护者 & 贡献者  
-> 目标：把 Agent-VQE 从「4-qubit demo」演进为「可扩展、可插拔、可评估」的自动 Ansatz 搜索框架，并为几十到上百比特的后续实验打基础。
+> 版本：2026-03-29  
+> 目标：维护一个可扩展、可插拔、可审计的自动 Ansatz 搜索框架，并确保计划文档与当前代码状态一致。
 
 ## Changelog
 
-- **2026-03-11**: 完成 Phase 3 中的规范化与审计增强。制定了 `evaluation_protocol.md` 与 `config_schema.md`，日志升级至 `schema 1.1` 并支持环境指纹与 Git 追踪。
-- **2026-03-11**: 完成 Phase 2。实现了 `SearchStrategy` 插件化架构与 `SearchOrchestrator` 编排器，支持基于控制信号的自动策略切换。
-- **2026-03-11**: 完成 Phase 1。统一了 `results.jsonl` 日志规范，对齐了 GA、MultiDim 和 Baseline 的输出格式。
+- **2026-03-29**: `core/research/` 已完成单 Agent 外层运行时第一轮收束，新增 `runtime / agent / policy / executor / interpreter / memory_store / research_schemas`。
+- **2026-03-29**: `core/research/driver.py` 已移除，CLI 与恢复入口统一收口到 `core/research/runtime.py`。
+- **2026-03-29**: `ResearchSession` 已以结构化 `DecisionRecord + RunBundle` 作为主写入路径，`autoresearch.jsonl` 保留兼容视图。
+- **2026-03-29**: 计划同步到重构后的仓库结构，`core/` 已拆分为 `foundation / representation / evaluator / generator / orchestration / research / warmstart`。
+- **2026-03-29**: 确认实验目录规范已迁移到 `artifacts/`，当前 `results.jsonl` schema 为 `1.2`。
+- **2026-03-29**: 确认 `AdaptVQEStrategy` 已有原型与测试，但仍缺少与 GA / MultiDim 并列的标准实验入口。
+- **2026-03-11**: 完成统一日志、策略接口与编排器的第一轮实现。
 
----
+## 1. 总体目标
 
-## 1. 总体目标与范围
+- 把 ansatz 设计从“手工调脚本”提升为“结构化、可比较、可自动搜索”的问题。
+- 把搜索、评估、日志、报告、恢复与策略切换统一到同一套工程协议下。
+- 为更大规模量子系统保留架构，但当前默认验证仍以 4-qubit TFIM / LiH 为主。
 
-- 将线路设计从「手工启发式」系统化为「可优化的问题」：
-  - 搜索对象从 Python 代码转为结构化配置（`config dict / AnsatzSpec`）。
-  - 把 GA、多维网格搜索（MultiDim）、基线 Zoo 统一在同一评估与日志体系下。
-- 面向更大规模体系（几十到上百比特）提前预留策略与架构：
-  - 搜索 **结构与超参数**，连续参数交给局部优化器。
-  - 支持 ADAPT-VQE/贪心构造等更可扩展的方法。
-- 保持「客观现实」不变（`core/base_env.py`, `experiments/*/env.py`），所有改动集中在「猜想空间」与搜索/控制逻辑。
+当前阶段暂不处理：
 
-不在本阶段解决的问题：
-- 不更改底层模拟后端（继续使用 tensorcircuit + PyTorch）。
-- 不直接实现上百比特的真实硬件实验，仅在架构上做好预留。
+- 不替换底层模拟后端。
+- 不把 50-100 qubit 运行作为默认常规工作流。
 
----
+## 2. 当前框架现状（2026-03-29）
 
-## 2. 当前框架现状（2026-03-11）
+代码结构：
 
-代码结构要点：
-- `core/base_env.py`：量子环境抽象（客观现实基类），只读。
-- `experiments/tfim/env.py`, `experiments/lih/env.py`：TFIM & LiH 具体环境，只读。
-- `core/circuit_factory.py`：从结构化 `config` 构造量子线路，已经支持：
-  - `layers`, `single_qubit_gates`, `two_qubit_gate`, `entanglement`,
-  - `init_state`, `param_strategy` 等。
-- `core/engine.py`：
-  - `vqe_train`：统一的 VQE 训练循环，现已支持结构化日志（`results.jsonl`）。
-  - `GridSearchStrategy`：封装了多维网格搜索（MultiDim）。
-  - 报告生成、结果记录（TSV + Markdown + 图像）。
-- `core/search_algorithms.py`：
-  - `GASearchStrategy`：基于 `circuit_factory` 的 GA 搜索插件。
-- `core/controller.py`：
-  - `SearchController`：核心预算与停止规则（max runs, wall-clock, no-improvement, failures）。
-  - `SearchOrchestrator`：策略编排器，负责多策略（Strategy Chain）的顺序执行与热切换。
-- `core/strategy_base.py`：定义了 `SearchStrategy` 抽象接口。
-- `experiments/*/run.py`：
-  - 已支持从 `ga/best_config_ga.json`、`multidim/best_config_multidim.json` 等加载配置。
-  - 与 Baseline/Baseline Zoo 的 `AnsatzSpec` 已经对齐。
+- `core/foundation/base_env.py`：量子环境抽象，作为“客观现实”层保持稳定。
+- `core/representation/compiler.py`：由结构化 config 构造线路，并估算线路成本。
+- `core/evaluator/`：
+  - `training.py`：统一 VQE 优化循环
+  - `report.py`：Markdown 报告与 `results.jsonl`
+  - `logging_utils.py`：`results.tsv` 与文本日志
+  - `api.py`：实验目录创建、多保真评估与晋级辅助
+- `core/generator/`：
+  - `strategy.py`：统一策略接口
+  - `ga.py`：GA 搜索
+  - `grid.py`：网格 / 多维搜索
+  - `adapt.py`：ADAPT-VQE 原型
+- `core/orchestration/controller.py`：`SearchController` 与 `SearchOrchestrator`
+- `core/research/runtime.py`：session pointer、resume wiring 与运行时入口
+- `core/research/agent.py`：单 Agent 外层研究循环 owner
+- `core/research/policy.py`：规则驱动的 `HypothesisSpec / ActionSpec` 选择器
+- `core/research/executor.py`：结构化执行层，产出 `RunBundle`
+- `core/research/interpreter.py`：研究判断层，产出 `DecisionRecord`
+- `core/research/session.py`：结构化 session API
+- `core/research/memory_store.py`：`research_memory.json` / `autoresearch.jsonl` / `autoresearch.md`
+- `core/warmstart/`：配置级与参数级映射
 
-现有策略：
-- GA：`core/search_algorithms.GASearchStrategy` + `experiments/*/ga_search.py`。
-- MultiDim：基于 `core.engine.GridSearchStrategy` 的结构化网格搜索。
-- Baseline：`baselines/` 中的固定 ansatz 对照。
+实验入口：
 
----
+- `experiments/tfim/run.py`
+- `experiments/lih/run.py`
+- `experiments/*/ga/search.py`
+- `experiments/*/multidim/search.py`
+- `experiments/*/orchestration/auto_search.py`
+
+输出约定：
+
+- 每次运行生成独立时间戳目录
+- LiH 与 autoresearch 的生成产物集中放入 `artifacts/runs/`
+- TFIM 的默认验证目录当前仍直接落在 `experiments/tfim/`
+- `results.jsonl` 当前 schema 为 `1.2`
+- `experiments/<system>/results.tsv` 保留系统级轻量汇总
 
 ## 3. 设计原则
 
-- **分层优化**：
-  - 全局搜索：GA / MultiDim / 未来的 BO、RL 等主要针对「结构与超参数」。
-  - 局部优化：`vqe_train` 对连续参数做梯度/基于采样的局部优化。
-- **统一记录 & 可审计**：
-  - 所有策略写入统一的 `results.jsonl`（含 `ansatz_spec`, `optimizer_spec`, `git_diff`）。
-  - 结果可复现、可对比、可追踪来源代码状态。
-- **预算约束 & 自动停止**：
-  - 所有搜索都必须通过 `SearchController` 管理预算与停止规则。
-  - 长时间无改进/连续失败会触发策略切换或空间收缩。
-- **可插拔策略**：
-  - 通过 `SearchStrategy` 接口挂载「策略插件」。
-  - 支持在后续阶段新增 ADAPT-VQE、BO、RL 等搜索后端。
+- **分层优化**：结构搜索与连续参数优化解耦。
+- **统一审计**：实验记录必须能追溯到 config、代码状态、环境指纹与产物路径。
+- **预算优先**：搜索过程由 `SearchController` 管理，而不是无限试错。
+- **策略可插拔**：GA、Grid、ADAPT 及未来方法共享同一生成器表面。
+- **文档同步**：README、Plan、协议文档必须反映当前真实入口和目录。
 
----
+## 4. 路线图
 
-## 4. 开发路线图（按阶段）
+### Phase 1：统一日志与基础搜索入口（DONE）
 
-### Phase 1：策略基础设施整理与统一日志（2026-03-11, DONE）
+- [x] GA / MultiDim / Baseline 输出对齐
+- [x] `results.jsonl` 与 `results.tsv` 统一
+- [x] 产出 `best_config_*.json`
 
-目标：把现有 GA、MultiDim、Baseline 在工程上拉齐，为后续扩展做地基。
+### Phase 2：策略插件化与编排器（DONE）
 
-主要工作：
-1. 整理统一的「实验记录规范」
-   - [x] 在 `doc/` 中补充一份简短规范，定义 `results.jsonl` 的字段约定。
-2. 完成 GA / MultiDim / Baseline 的输出对齐
-   - [x] GA/MultiDim 均支持自动保存最优 `best_config_*.json`。
-3. 增强 `SearchController`
-   - [x] 实现详细日志与回调接口。
+- [x] 引入统一策略接口
+- [x] 实现 `SearchController`
+- [x] 实现 `SearchOrchestrator`
+- [x] 在 TFIM / LiH 中提供多策略 demo
 
----
+### Phase 3：协议固化、Warm-start 与构造式原型（MOSTLY DONE）
 
-### Phase 2：策略插件化与控制器抽象（2026-03-11, DONE）
+1. 评估与日志协议
+   - [x] `doc/evaluation_protocol.md`
+   - [x] `doc/logging_spec.md`
+   - [x] `schema_version 1.2`
+2. Typed schema
+   - [x] `core/model/schemas.py`
+   - [x] `tests/test_schemas.py`
+3. Warm-start
+   - [x] `core/warmstart/config_mapper.py`
+   - [x] `core/warmstart/ansatz_mapper.py`
+   - [x] 参数映射测试与基准
+4. 构造式策略
+   - [x] `core/generator/adapt.py` 原型
+   - [ ] 补齐与 GA / MultiDim 同等级的实验入口与对比报告
+5. 优化器抽象
+   - [x] evaluator 层已支持统一优化器描述与评估对象
 
-目标：从「单策略脚本」演进为「多策略编排器」，允许在一个实验中按预算自动切换策略。
+### Phase 4：外层自动研究循环（PARTIAL）
 
-主要工作：
-1. 引入 `SearchStrategy` 抽象
-   - [x] 在 `core/` 新增 `strategy_base.py`。
-   - [x] 将 `GAOptimizer` 适配为 `GASearchStrategy`。
-   - [x] 提供 `GridSearchStrategy` 封装。
-2. 引入 `SearchOrchestrator`
-   - [x] 实现顺序驱动多个搜索策略。
-   - [x] 响应「无改进」信号实现自动切换。
-3. 更新实验脚本入口
-   - [x] 创建 `experiments/*/auto_search.py`。
+- [x] `core/research/runtime.py` 可恢复运行
+- [x] session pointer 写入 `artifacts/state/`
+- [x] 单 Agent runtime 已拆分为 `agent / policy / executor / interpreter / session / memory_store`
+- [x] `ResearchSession` 已以结构化 decision/run 对象作为主写入路径
+- [ ] `ResearchSession` 与主 `results.jsonl` 的跨文件语义继续对齐
+- [ ] keep / discard、hypothesis memory 与跨策略经验继续丰富
 
-产出：
-- 一个统一的策略抽象层，支持热插拔。
+### Phase 5：大规模与迁移验证（FUTURE）
 
----
+- [ ] 强化 100-qubit TFIM scaling workflow
+- [ ] 建立更明确的 multi-fidelity benchmark 约定
+- [ ] 探索跨任务迁移与结构先验复用
 
-### Phase 3：规范化、参数映射与构造性策略（进行中）
+## 5. 当前优先级
 
-目标：从“功能扩张”转向“规范化与稳健性”，引入支持高比特扩展的构造性协议与映射机制。
+1. 把 ADAPT 原型提升为标准实验入口，并形成与 GA / MultiDim 的公平对比。
+2. 继续减少 research runtime 与 legacy 文件视图之间的语义重复。
+3. 持续保持主文档和实验目录说明与代码行为一致。
 
-主要工作：
-1. **评估协议与配置规范 (P0, DONE)**
-   - [x] 制定 `doc/evaluation_protocol.md`，统一预算、种子、早停与排名指标。
-   - [x] 制定 `doc/config_schema.md`，定义 Typed Config 结构。
-2. **审计增强 (P0, DONE)**
-   - [x] 日志 `results.jsonl` 加入 `schema_version: 1.1` 与环境指纹（Python, OS, 库版本）。
-   - [x] 增强 Git 追踪（Commit SHA, Dirty status, Diff Hash）。
-   - [x] 实验脚本 `run.py` 显式记录 `config_path_used`。
-3. **参数映射协议与 Warm-start (P1, DONE)**
-   - [x] 定义并实现了 `core/parameter_mapping.py`，规范 Warm-start 的参数继承行为。
-   - [x] 通过 `tests/benchmark_mapping.py` 验证了热启动在层数增加时的恒等性。
-4. **ADAPT-VQE / 贪心构造原型 (P1)**
-   - [ ] 在 `core/` 新增 `adapt_vqe.py` 并封装为 `AdaptVQEStrategy` 插件。
-   - [ ] 在 4-qubit 体系中基于统一协议对比 ADAPT vs GA 的收敛效率。
-5. **局部优化器抽象 (P1, DONE)**
-   - [x] 在 `core/engine.py` 中为 `vqe_train` 提供通用的优化器接口，支持 `OptimizerSpec` 驱动。
-6. **自动化测试“护城河” (P0, NEW)**
-   - [x] 实现 `tests/test_schemas.py`, `test_parameter_mapping.py`, `test_orchestration.py`。
+## 6. 验收标准
 
-产出：
-- 统一的评估协议文档与优化器抽象接口。
-- 显式的参数映射协议。
-- 可运行且公平评估的 ADAPT-VQE 策略插件。
+- M1：主文档只引用现存文件、脚本和目录。
+- M2：实验日志字段、schema 版本和产物路径与实现一致。
+- M3：标准搜索策略至少包括 GA、Grid，ADAPT 具备可复现实验入口。
+- M4：外层研究循环的 session schema 与主日志体系完成对齐。
 
----
-
-### Phase 4：高阶策略与大规模验证（远期规划）
-
-目标：在统一协议下尝试更智能的搜索方法，并验证架构的可扩展性。
-
-工作方向：
-- **贝叶斯优化 (BO)**：适合点数少、开销大的精细搜索阶段。
-- **强化学习 (RL)**：将「构造线路」视为 Markov 决策过程。
-- **高比特场景验证**：在架构上引入硬件拓扑约束，探索近似评估方法。
-
----
-
-## 5. 任务分解与建议优先级
-
-### 已完成 (Archived Progress)
-- [x] Phase 1: 统一日志记录 & GA/MultiDim/Baseline 对齐
-- [x] Phase 2: 抽象 `SearchStrategy` & 引入 `SearchOrchestrator` & 策略热切换
-
-### 当前重点 (Current Priority)
-1. **(P1) 参数映射协议**：规范 Warm-start 的参数继承行为。
-2. **(P1) ADAPT-VQE 实现**：基于新协议实现插件。
-3. **(P1) 局部优化器抽象**：支持动态配置 Adam/SPSA。
-
----
-
-## 6. 里程碑与检验标准
-
-- M1 (DONE)：GA / MultiDim / Baseline 生成统一格式 JSONL（2026-03-11）。
-- M2 (DONE)：`SearchOrchestrator` 自动完成策略切换示例（2026-03-11）。
-- M3 (DONE)：**协议固化**。完成评估协议制定与日志版本化升级（2026-03-11）。
-- M4：**参数映射**。完成参数映射协议定义。
-- M5：**构造验证**。ADAPT-VQE 在 4-qubit 系统上完成公平对比验证。
-- M5：**外推论证**。完成高比特（50-100+）场景下的架构约束与方案论证。
-
-本 Plan 将随代码演进而更新。
+本计划已按 2026-03-29 仓库状态更新。

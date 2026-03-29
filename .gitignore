@@ -12,7 +12,7 @@ wheels/
 .claude/
 **/.DS_Store
 
-# Experiment artifacts (logs, reports, plots, raw circuits, audits)
+# Experiment-generated files
 **/*.log
 **/*.tsv
 **/*.jsonl
@@ -22,6 +22,13 @@ wheels/
 **/*.patch
 **/audit/
 **/[0-9]*_*/
-**/.current_autoresearch_*
-**/autoresearch_runs/
-experiments/lih/mindquantum_data/
+
+# Experiment workspace noise
+experiments/**/__pycache__/
+experiments/**/.ipynb_checkpoints/
+experiments/**/.pytest_cache/
+
+# Experiment runtime state and caches
+experiments/**/artifacts/runs/
+experiments/**/artifacts/cache/
+experiments/**/artifacts/state/current_autoresearch_*

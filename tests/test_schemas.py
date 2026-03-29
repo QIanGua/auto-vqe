@@ -1,6 +1,6 @@
 import pytest
 from pydantic import ValidationError
-from core.schemas import (
+from core.model.schemas import (
     AnsatzSpec, OptimizerSpec, SchedulerSpec, SearchSpaceSpec,
     BlockSpec, OperatorSpec, OperatorPoolSpec, StructureEdit,
     WarmStartPlan, EvaluationSpec, EvaluationResult, CandidateSpec,

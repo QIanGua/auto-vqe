@@ -1,9 +1,8 @@
 import pytest
 import numpy as np
-from core.schemas import AnsatzSpec, BlockSpec, OperatorSpec, StructureEdit
-from core.circuit_factory import (
-    apply_structure_edit, build_circuit_from_ansatz, estimate_circuit_cost
-)
+from core.model.schemas import AnsatzSpec, BlockSpec, OperatorSpec, StructureEdit
+from core.representation.compiler import build_circuit_from_ansatz, estimate_circuit_cost
+from core.representation.edits import apply_structure_edit
 
 def test_apply_structure_edit():
     ansatz = AnsatzSpec(name="test", n_qubits=2)

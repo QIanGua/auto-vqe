@@ -11,13 +11,16 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.engine import ansatz_search  # type: ignore
-from core.circuit_factory import build_ansatz, generate_config_grid  # type: ignore
+from core.evaluator.api import prepare_experiment_dir
+from core.generator.grid import ansatz_search
+from core.representation.compiler import build_ansatz
+from core.representation.search_space import generate_config_grid
 from experiments.lih.env import ENV  # type: ignore
 
 
 N_QUBITS = ENV.n_qubits
 HF_QUBITS = [0, 1]
+RUNS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "artifacts", "runs")
 
 
 def make_lih_circuit_fn(config: dict):
@@ -37,10 +40,8 @@ def run_multidim_search():
 
     config_list = generate_config_grid(dimensions)
 
-    from core.engine import prepare_experiment_dir
-
     strategy_dir = os.path.dirname(__file__)
-    exp_dir = prepare_experiment_dir(strategy_dir, "lih_multidim_search")
+    exp_dir = prepare_experiment_dir(RUNS_DIR, "lih_multidim_search")
 
     result = ansatz_search(
         env=ENV,

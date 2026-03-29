@@ -1,108 +1,146 @@
-# 自动量子物理学家 (Auto-VQE)
+# 自动量子物理学家（Auto-VQE）
 
-这是一个让 LLM 自动探索量子线路结构（Ansatz）的实验。我们的目标是逼近一维横场伊辛模型 (TFIM)、LiH 等量子体系的基态能量。
+这是面向 Agent 的实验执行手册。目标是在不修改物理问题定义的前提下，自动探索更好的 ansatz 结构。
 
-## 实验约束 (The Refutation Rules)
+## 1. 不可变领域（Objective Reality）
 
-- **不可变领域 (Objective Reality)**  
-  - `core/base_env.py` 中定义的 `QuantumEnvironment` 抽象类。  
-  - `experiments/tfim/env.py`、`experiments/lih/env.py` 中给出的哈密顿量与精确能量。  
-  这些文件代表真实物理世界的规则，**绝对禁止修改**。
-- **可变领域 (The Conjecture)**  
-  - `experiments/tfim/run.py`、`experiments/lih/run.py` 中的 ansatz 构造函数 `create_circuit`。  
-  - `experiments/*/ga_search.py` 中的 GA 搜索配置。  
-  - `core/circuit_factory.py` 中的通用线路工厂（`build_ansatz(config, n_qubits)`）。  
-  你可以修改：
-    - 搜索配置 `config dict`（推荐方式，不需要写 Python 线路代码）：
-      - `layers`: 层数
-      - `single_qubit_gates`: 门类型 (`["ry"]`, `["ry", "rz"]` 等)
-      - `two_qubit_gate`: 纠缠门 (`cnot`, `cz`, `rzz`, `rxx_ryy_rzz`)
-      - `entanglement`: 拓扑 (`linear`, `ring`, `brick`, `full`)
-      - `init_state`: 初始态 (`zero`, `hadamard`, `hf`)
-      - `param_strategy`: 参数策略 (`independent`, `tied`)
-    - 或直接修改 `create_circuit` 中的量子门组合（传统方式）。
-    - 优化器策略（例如添加动量 Momentum、使用 Adam 优化逻辑，或者调节学习率）。
+以下内容代表物理问题本身，默认不应修改：
 
-## 奥卡姆剃刀原则 (Simplicity Criterion)
+- `core/foundation/base_env.py` 中定义的 `QuantumEnvironment`
+- `experiments/tfim/env.py`
+- `experiments/lih/env.py`
 
-在能量误差（`energy_error`）相近的情况下，参数数量（`num_params`）越少、线路深度越浅越好。如果一个改动使得能量下降了极小的幅度，却让线路复杂了一倍，这个改动应当被丢弃。
+## 2. 可变领域（The Conjecture）
 
-**Pareto 占优条件**（量化版奥卡姆剃刀）：  
-方案 A 优于方案 B，当且仅当以下任一条件成立：
-1. `A.energy_error < B.energy_error` **且** `A.num_params ≤ B.num_params`
-2. `A.energy_error ≤ B.energy_error` **且** `A.num_params < B.num_params`
+以下内容属于可搜索、可改进的猜想空间：
 
-不满足 Pareto 占优的方案之间按能量误差优先排序。
+- `core/representation/compiler.py`
+- `experiments/*/ga/search.py`
+- `experiments/*/multidim/search.py`
+- `experiments/*/orchestration/auto_search.py`
+- `core/generator/` 中的策略实现
+- `core/warmstart/` 中的参数继承规则
 
-## 目标
+推荐优先修改结构化 config，而不是重写底层物理环境。当前常用维度包括：
 
-运行对应体系的实验脚本，你的唯一核心优化目标是：  
-**最小化 `val_energy`**（使其无限逼近 `exact_energy`，即最小化 `energy_error`）。
+- `layers`
+- `single_qubit_gates`
+- `two_qubit_gate`
+- `entanglement`
+- `init_state`
+- `param_strategy`
 
-- TFIM: `uv run python experiments/tfim/run.py`
-- LiH: `uv run python experiments/lih/run.py`
+## 3. 核心目标
 
-## 搜索策略指导
+核心优化目标是让 `val_energy` 尽可能逼近 `exact_energy`，同时遵守复杂度约束。
 
-### 推荐搜索维度（按优先级排列）
-1. **层数 (Depth)**: 从 1 层逐步增加，寻找最小有效深度
-2. **门类型 (Gate Set)**: RY, RX+RY, RZ+RX+RZ (Euler), CNOT, RZZ, CZ 等
-3. **纠缠拓扑 (Entanglement Topology)**: 线性 (Linear), 环形 (Ring), 砖墙式 (Brick-Layer), 全连接 (All-to-All)
-4. **参数策略 (Parameter Strategy)**: 独立参数, 参数绑定 (Tying), QAOA 式对称绑定
-5. **初始化 (Initialization)**: 随机, Hadamard 基, Hartree-Fock 初始态
+常用入口：
 
-### 搜索方式
+- TFIM：`uv run python experiments/tfim/run.py`
+- LiH：`uv run python experiments/lih/run.py`
 
-**方式一（推荐）: 结构化 config 搜索**
-通过 `core/circuit_factory.py` 的 `generate_config_grid()` 定义搜索维度，自动生成所有组合并评估：
-```python
-from core.circuit_factory import generate_config_grid
-dimensions = {
-    "layers": [1, 2, 3],
-    "single_qubit_gates": [["ry"], ["ry", "rz"]],
-    "two_qubit_gate": ["cnot", "rzz"],
-    "entanglement": ["linear", "ring", "brick"],
-}
-config_list = generate_config_grid(dimensions)
+显式指定配置时可使用：
+
+```bash
+uv run python experiments/tfim/run.py --config experiments/tfim/ga/best_config_ga.json --trials 5
+uv run python experiments/lih/run.py --config experiments/lih/multidim/best_config_multidim.json --trials 2
 ```
 
-**方式二: 手动搜索顺序 (基于 GA 搜索脚本)**
-1. 先用 `ga_search.py` 扫描不同层数，确定最小有效深度
-2. 在最小深度上尝试不同的门类型组合
-3. 对最优门类型进行拓扑优化
-4. 最后尝试参数绑定策略以进一步精简
+## 4. 奥卡姆剃刀原则
 
-## 实验循环 (The Loop)
+在误差相近时，优先选择更简单的方案：
 
-1. **查看**当前代码状态  
-   - 阅读 `core/engine.py` 了解通用 VQE 流程。  
-   - 阅读 `experiments/<system>/env.py` 理解哈密顿量结构。  
-   - 阅读 `experiments/<system>/run.py` 理解当前 ansatz 设计。
-2. **修改猜想空间**  
-   - 直接修改 `experiments/<system>/run.py` 中的 `create_circuit` 或 ansatz 配置，提出新的线路猜想。
-3. **运行实验**  
-   - 执行：`uv run python experiments/<system>/run.py`  
-   - 日志自动写入 `experiments/<system>/vqe_*.log`
-   - 收敛曲线自动保存为 `convergence_*.png`
-4. **读取结果**  
-   - 在日志和终端中查看 `val_energy`, `num_params`, `energy_error`, `actual_steps` 等指标。  
-   - 汇总结果会被自动追加到 `experiments/<system>/results.tsv`（含时间戳）。
-5. **记录与标注**  
-   - 在 `results.tsv` 中注明：`timestamp, exp_name, val_energy, energy_error, num_params, actual_steps, training_sec, comment`。
-   - 使用一致的命名规范：`{System}_{SeqID}_{ShortName}`，如 `TFIM_001_Baseline`。
-6. **评估决策**  
-   - 如果新方案 Pareto 占优于当前最优，则保留代码 (`keep`)。  
-   - 如果能量变差或系统崩溃，则回退代码 (`discard`)。
-   - 可使用 `experiment_guard` 上下文管理器自动保护 `run.py`。
-7. **预算与停止规则 (The Budget & Stopping Rules)**
-   - **预算约束**:
-     - 每轮最大运行次数 (Max Runs): 默认 50 次。
-     - 最大 Wall-clock 时间: 设置硬性时间限制。
-   - **自动停止/切换**:
-     - 如果连续 10 次 proposal 没有改善，自动触发策略切换 (Switch Proposer)。
-     - 如果连续 3 次运行时/语法失败，自动缩小搜索空间。
-     - 若 Improvement 小于阈值 (1e-4) 且复杂度显著增加，则自动 discard。
-   - **稳定性评估**:
-     - 如果某类 ansatz 在多个 seed 上方差过大，标记为 unstable 并审慎评估。
+- 参数更少
+- 线路更浅
+- 双比特门更少
 
-Agent 已从“无限试错脚本”进化为“预算受限的科研决策器”。
+可按 Pareto 视角判断：
+
+1. `A.energy_error < B.energy_error` 且 `A.num_params <= B.num_params`
+2. `A.energy_error <= B.energy_error` 且 `A.num_params < B.num_params`
+
+## 5. 推荐搜索顺序
+
+1. 先搜索层数，确认最小有效深度。
+2. 再搜索单比特门集合与双比特门类型。
+3. 再比较纠缠拓扑。
+4. 最后再尝试参数绑定、初始化和 warm-start 细节。
+
+## 6. 推荐工作流
+
+### 方式一：GA 搜索
+
+```bash
+uv run python experiments/tfim/ga/search.py
+uv run python experiments/lih/ga/search.py
+```
+
+### 方式二：多维网格搜索
+
+```bash
+uv run python experiments/tfim/multidim/search.py
+uv run python experiments/lih/multidim/search.py
+```
+
+### 方式三：多策略编排
+
+```bash
+uv run python experiments/tfim/orchestration/auto_search.py
+uv run python experiments/lih/orchestration/auto_search.py
+```
+
+### 方式四：可恢复外层研究循环
+
+```bash
+uv run python core/research/runtime.py --dir experiments/lih --strategy ga --target 1e-6 --max 100
+```
+
+当前这个入口已经走结构化 Agent runtime，而不是单纯 shell 脚本循环。实际运行时链路是：
+
+```text
+runtime.py
+  -> ResearchAgent
+  -> PolicyEngine
+  -> ExperimentExecutor
+  -> ResultInterpreter
+  -> ResearchSession / ResearchMemoryStore
+```
+
+## 7. 单轮实验闭环
+
+1. 阅读当前环境、默认 config 和输出目录。
+2. 修改猜想空间，优先调整 config 或搜索范围。
+3. 执行搜索或验证。
+4. 读取 `val_energy`、`energy_error`、`num_params`、`actual_steps` 等指标。
+5. 根据 Pareto 改进决定 keep / discard。
+
+## 8. 当前输出约定
+
+常见输出包括：
+
+- `experiment.log`
+- `results.tsv`
+- `results.jsonl`
+- `report_*.md`
+- `convergence_*.png`
+- `circuit_*.png`
+- `circuit_*.json`
+
+注意：
+
+- LiH 的默认运行产物集中到 `experiments/lih/artifacts/runs/`
+- 长周期 autoresearch session 在 `experiments/<system>/artifacts/runs/autoresearch/`
+- `experiments/<system>/results.tsv` 会保留系统级轻量汇总
+
+## 9. 预算与停止规则
+
+- 搜索策略应通过 `SearchController` 管理预算，而不是无限制尝试。
+- 多策略流程可通过 `SearchOrchestrator` 基于“无改进 / 连续失败”等信号切换。
+- 若改进极小但复杂度显著上升，应倾向 discard。
+
+## 10. 当前注意事项
+
+- `AdaptVQEStrategy` 已存在于 `core/generator/adapt.py`，但还不是标准实验入口。
+- `results.jsonl` 当前 schema 为 `1.2`。
+- Agent runtime 当前主真相源是 `DecisionRecord + RunBundle + research_memory.json`。
+- `autoresearch.jsonl` 与 `autoresearch.md` 仍保留为 session 兼容视图。

@@ -1,57 +1,76 @@
-# Agent-VQE 实验评估协议 (Evaluation Protocol)
+# Agent-VQE 实验评估协议（Evaluation Protocol）
 
-> **版本**: 1.0 (P0)  
-> **状态**: 草案  
-> **目标**: 确保不同搜索策略、不同 Ansatz 结构之间的比较是公平、可复现且具有统计显著性的。
+> 版本：1.2  
+> 状态：当前执行约定  
+> 更新时间：2026-03-29
 
----
+## 1. 目标
 
-## 1. 训练预算 (Training Budget)
+确保不同搜索策略、不同 ansatz 结构和不同运行入口之间的比较口径尽量一致，并与当前代码实现保持一致。
 
-所有参与正式对比的策略必须遵循统一的预算约束，除非实验目的另有说明。
+## 2. 预算约定
 
-### 1.1 迭代次数 (VQE Steps)
-- **默认步数**: 500 Steps。
-- **早停规则 (Early Stopping)**:
-  - 窗口大小: 50 Steps。
-  - 相对阈值: $10^{-8}$。
-  - 如果在窗口内能量改进小于阈值，则视为收敛。
+仓库当前没有为所有脚本强制一个完全统一的固定步数；预算由具体入口脚本和多保真阶段共同决定。
 
-### 1.2 时间约束
-- **最大运行时间**: 每轮 `vqe_train` 不得超过 300 秒（在标准环境指纹设备下）。
+当前已落地的常见默认值：
 
----
+- `experiments/tfim/run.py`: 默认 `max_steps=1500`
+- `experiments/lih/run.py`: 默认 `max_steps=800`
+- `core/evaluator/api.py` 的 promotion 约定：
+  - `medium`: `max_steps=150`
+  - `full`: `max_steps=500`
+- `core/generator/adapt.py` 原型中，quick 评估常用 `max_steps=50`
 
-## 2. 统计显著性 (Statistical Significance)
+因此，正式比较时必须明确记录：
 
-### 2.1 多种子验证 (Multi-Seed)
-- **初筛阶段**: 可使用单 Seed。
-- **正式验证 (Full Evaluation)**: 必须在 5 个随机种子（建议: [42, 123, 2024, 777, 999]）下进行独立实验。
-- **记录指标**: 均值 ($Mean$)、中位数 ($Median$)、标准差 ($Std$)。
+- 使用的入口脚本
+- `max_steps`
+- 学习率或优化器配置
+- `trials` 或 `n_seeds`
 
-### 2.2 初始参数处理
-- **Random Initialization**: 必须记录随机分布类型。
-- **Warm-start (参数复用)**: 必须在日志中显式标记为 `warm_start: true`。
+## 3. 排名原则
 
----
+默认按以下优先级比较：
 
-## 3. 排名指标 (Ranking Metrics)
+1. `energy_error` 或 `val_energy`
+2. `num_params`
+3. `two_qubit_gates`
+4. `runtime_sec`
 
-评估一个 Ansatz 优劣的综合打分公式（奥卡姆剃刀）：
+当精度处于同一量级时，优先保留更简单的结构。
 
-$$ Score = W_{energy} \cdot \log_{10}(\Delta E) + W_{params} \cdot N_{params} + W_{depth} \cdot Depth $$
+## 4. 多种子与稳定性
 
-> 其中 $\Delta E$ 是能量误差，$N_{params}$ 是参数量。默认权重比例应优先保证能量精度，其次是参数极简化。
+- 搜索阶段可先用较少 trial 或单 seed 进行筛选。
+- 验证阶段建议使用入口脚本的 `--trials` 做重复运行。
+- 结论性对比至少应记录：
+  - 最优值
+  - 均值或中位数
+  - 方差或标准差中的至少一种
 
----
+## 5. 审计要求
 
-## 4. 实验复现与审计
+每次正式实验至少要能恢复以下信息：
 
-### 4.1 环境指纹
-每次运行必须捕获以下信息：
-- `code_commit_sha`
-- `dependency_versions` (tensorcircuit, torch, pennylane 等)
-- `device_info` (CPU/GPU 型号)
+- 使用的 config 或 `config_path_used`
+- `optimizer_spec`
+- `metrics`
+- `git_info`
+- `runtime_env`
+- `artifact_paths`
 
-### 4.2 显式配置
-- 最终结果必须明确记录所使用的 `config.json` 路径，禁止仅通过隐式文件名进行识别。
+这些字段当前由 `core/evaluator/report.py` 统一写入 `results.jsonl`。
+
+## 6. 例外情况
+
+以下场景允许预算不一致，但必须在报告或备注中注明：
+
+- quick / medium / full 多保真晋级
+- LiH 几何扫描
+- 100-qubit TFIM scaling
+- baseline 或 smoke run
+
+## 7. 当前缺口
+
+- 还没有一个仓库级的“统一正式 benchmark matrix”脚本自动锁定所有预算。
+- `ResearchSession` 与主 `results.jsonl` 之间仍有字段层面的重复与偏差。

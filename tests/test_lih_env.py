@@ -85,7 +85,7 @@ def test_lih_fallback():
     即使数据文件被重命名/缺失，环境变量也应能回退到 toy 模型。
     (这个测试会临时模拟数据文件不存在的情况)
     """
-    data_path = os.path.join(os.path.dirname(__file__), "../experiments/lih/lih_pyscf_data.json")
+    data_path = os.path.join(os.path.dirname(__file__), "../experiments/lih/data/lih_pyscf_data.json")
     backup_path = data_path + ".bak"
     
     if os.path.exists(data_path):
@@ -113,7 +113,7 @@ def test_lih_fallback():
 
 def test_lih_data_file_uses_explicit_fields():
     """生成的数据文件不应继续依赖模糊的 exact_energy 字段。"""
-    data_path = os.path.join(os.path.dirname(__file__), "../experiments/lih/lih_pyscf_data.json")
+    data_path = os.path.join(os.path.dirname(__file__), "../experiments/lih/data/lih_pyscf_data.json")
     if not os.path.exists(data_path):
         pytest.skip("lih_pyscf_data.json not found")
 

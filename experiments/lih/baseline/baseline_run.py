@@ -14,13 +14,17 @@ import torch
 # 将项目根目录添加到路径中
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.engine import vqe_train, print_results, setup_logger, log_results, generate_report
+from core.evaluator.api import prepare_experiment_dir
+from core.evaluator.logging_utils import log_results, print_results, setup_logger
+from core.evaluator.report import generate_report
+from core.evaluator.training import vqe_train
 from experiments.lih.env import ENV
 from baselines.uccsd import build_ansatz as build_uccsd
 
 
 N_QUBITS = ENV.n_qubits
 EXACT_ENERGY = ENV.exact_energy
+RUNS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "artifacts", "runs")
 
 # 固定 LiH baseline 配置。
 # 这里保留 HF 初始化，并使用显式 singles + doubles 的最小 UCCSD 骨架。
@@ -50,10 +54,7 @@ def run_baseline(trials: int = 5):
     """
     在固定 UCCSD baseline 配置上运行多次 VQE，并记录最优结果。
     """
-    from core.engine import prepare_experiment_dir
-
-    base_dir = os.path.dirname(__file__)
-    exp_dir = prepare_experiment_dir(base_dir, "lih_baseline_uccsd")
+    exp_dir = prepare_experiment_dir(RUNS_DIR, "lih_baseline_uccsd")
 
     uccsd_spec = build_uccsd(ENV, BASELINE_CONFIG)
     uccsd_spec_dict = uccsd_spec.to_logging_dict()

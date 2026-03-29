@@ -8,12 +8,14 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../")))
 
-from core.search_algorithms import GASearchStrategy
-from core.circuit_factory import build_ansatz
+from core.evaluator.api import prepare_experiment_dir
+from core.generator.ga import GASearchStrategy
+from core.representation.compiler import build_ansatz
 from experiments.lih.env import ENV
 
 N_QUBITS = ENV.n_qubits
 HF_QUBITS = [0, 1]
+RUNS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "artifacts", "runs")
 
 
 def make_lih_circuit_fn(config):
@@ -31,10 +33,8 @@ def run_ga_search():
         "entanglement": ["linear", "ring", "full"],
     }
 
-    from core.engine import prepare_experiment_dir
-
     strategy_dir = os.path.dirname(__file__)
-    exp_dir = prepare_experiment_dir(strategy_dir, "lih_ga_search")
+    exp_dir = prepare_experiment_dir(RUNS_DIR, "lih_ga_search")
 
     strategy = GASearchStrategy(
         env=ENV,

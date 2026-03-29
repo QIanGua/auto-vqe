@@ -1,8 +1,8 @@
 import torch
 import time
-from core.engine import vqe_train
-from core.parameter_mapping import IdentityMapper
-from core.circuit_factory import build_ansatz
+from core.evaluator.training import vqe_train
+from core.warmstart.config_mapper import IdentityMapper
+from core.representation.compiler import build_ansatz
 from experiments.tfim.env import TFIMEnvironment
 
 def benchmark_warm_start():
