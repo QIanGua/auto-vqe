@@ -82,8 +82,9 @@ class ResearchMemoryStore:
         with open(self.jsonl_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    def update_from_decision(
+    def apply_decision_to_memory(
         self,
+        memory: ResearchMemory,
         decision: DecisionRecord,
         run: Optional[RunBundle] = None,
         *,
@@ -93,7 +94,6 @@ class ResearchMemoryStore:
         transferable_insights: Optional[List[str]] = None,
         strategy_name: Optional[str] = None,
     ) -> ResearchMemory:
-        memory = self.load()
         if objective:
             memory.objective = objective
         memory.last_decision = decision
@@ -129,12 +129,49 @@ class ResearchMemoryStore:
                 stats["promotions"] += 1
         if run is not None:
             energy_error = run.metrics.get("energy_error")
+            num_params = run.metrics.get("num_params")
             if isinstance(energy_error, (int, float)):
-                if memory.best_energy_error is None or energy_error < memory.best_energy_error:
+                best_error = memory.best_energy_error
+                best_params = memory.best_num_params
+                improves_error = best_error is None or energy_error < best_error
+                improves_efficiency = (
+                    best_error is not None
+                    and best_params is not None
+                    and energy_error <= best_error
+                    and isinstance(num_params, (int, float))
+                    and int(num_params) < best_params
+                )
+                if improves_error or improves_efficiency:
                     memory.best_energy_error = float(energy_error)
                     memory.best_config_path = run.selected_config_path or decision.selected_config_path
+                    if isinstance(num_params, (int, float)):
+                        memory.best_num_params = int(num_params)
                     if decision.selected_candidate_id:
                         memory.best_candidate_id = decision.selected_candidate_id
+        return memory
+
+    def update_from_decision(
+        self,
+        decision: DecisionRecord,
+        run: Optional[RunBundle] = None,
+        *,
+        objective: Optional[str] = None,
+        dead_ends: Optional[List[str]] = None,
+        next_recommendations: Optional[List[str]] = None,
+        transferable_insights: Optional[List[str]] = None,
+        strategy_name: Optional[str] = None,
+    ) -> ResearchMemory:
+        memory = self.load()
+        memory = self.apply_decision_to_memory(
+            memory,
+            decision,
+            run,
+            objective=objective,
+            dead_ends=dead_ends,
+            next_recommendations=next_recommendations,
+            transferable_insights=transferable_insights,
+            strategy_name=strategy_name,
+        )
         self.save(memory)
         return memory
 
@@ -144,6 +181,7 @@ class ResearchMemoryStore:
         insights = "\n".join(f"- {item}" for item in memory.transferable_insights) or "- None yet"
         best_config = memory.best_config_path or "N/A"
         best_error = "N/A" if memory.best_energy_error is None else f"{memory.best_energy_error:.2e}"
+        best_params = "N/A" if memory.best_num_params is None else str(memory.best_num_params)
         last_summary = memory.last_decision.summary if memory.last_decision else "No decisions recorded yet."
         return f"""# Research Brain: {os.path.basename(self.system_dir)}
 
@@ -152,6 +190,7 @@ class ResearchMemoryStore:
 
 ## Best Known Configuration
 - **Energy Error**: {best_error}
+- **Num Params**: {best_params}
 - **Config Path**: `{best_config}`
 - **Candidate ID**: `{memory.best_candidate_id or "N/A"}`
 

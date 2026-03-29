@@ -78,3 +78,57 @@ def test_research_agent_runs_iteration_loop_and_updates_controller(tmp_path):
     assert calls[0][0] == 1
     assert calls[1][0] == 2
     assert controller.total_runs == 2
+
+
+def test_research_agent_preserves_policy_action_instead_of_overwriting_it(tmp_path):
+    session = ResearchSession(str(tmp_path / "experiments" / "lih"), str(tmp_path / "state"))
+    captured = {}
+
+    class DummyPolicy:
+        def propose_hypothesis(self, memory, controller, *, iteration, system_dir):
+            from core.model.research_schemas import HypothesisSpec
+
+            return HypothesisSpec(
+                hypothesis_id="h-custom",
+                system="lih",
+                objective="Optimize LiH ansatz.",
+                statement="Redirect the search region.",
+            )
+
+        def plan_next_action(self, memory, controller, *, hypothesis, system_dir, target_error=None):
+            from core.model.research_schemas import ActionSpec
+
+            return ActionSpec(
+                action_id="custom-action",
+                hypothesis_id=hypothesis.hypothesis_id,
+                system_dir=system_dir,
+                action_type="reduce_search_space",
+                strategy_name="ga",
+                search_space_patch={"layers": "shrink"},
+            )
+
+    class DummyExecutor:
+        def execute_action(self, action, iteration, *, session_dir=None, log_path=None, emit=None, emit_stream_line=None):
+            captured["action"] = action
+            from core.model.research_schemas import RunBundle
+
+            return RunBundle(
+                action=action,
+                metrics={"energy_error": 0.01, "val_energy": -1.0, "num_params": 6},
+                success=True,
+            )
+
+    agent = ResearchAgent(
+        system_dir=str(tmp_path / "experiments" / "lih"),
+        strategy="ga",
+        session=session,
+        policy_engine=DummyPolicy(),
+        executor=DummyExecutor(),
+    )
+
+    success, metrics = agent.step(1)
+
+    assert success is True
+    assert metrics["energy_error"] == 0.01
+    assert captured["action"].action_id == "custom-action"
+    assert captured["action"].action_type == "reduce_search_space"

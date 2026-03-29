@@ -11,6 +11,11 @@ from core.model.schemas import AnsatzSpec, BlockSpec, HardwareConstraintSpec, Op
 def _tensorcircuit():
     import tensorcircuit as tc
 
+    # The training/evaluation stack passes PyTorch tensors with gradients into
+    # circuit builders, so TensorCircuit must use the matching backend.
+    if tc.backend.name != "pytorch":
+        tc.set_backend("pytorch")
+
     return tc
 
 

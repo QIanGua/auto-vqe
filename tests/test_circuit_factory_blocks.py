@@ -1,7 +1,9 @@
 import pytest
 import numpy as np
+import torch
 from core.model.schemas import AnsatzSpec, BlockSpec, OperatorSpec, StructureEdit
 from core.representation.compiler import build_circuit_from_ansatz, estimate_circuit_cost
+from core.representation.compiler import build_ansatz
 from core.representation.edits import apply_structure_edit
 
 def test_apply_structure_edit():
@@ -99,3 +101,20 @@ def test_estimate_circuit_cost_advanced_gates():
     assert cost_ext["num_params"] == 3
     assert cost_ext["two_qubit_gates"] == 3
     assert cost_ext["depth"] >= 0
+
+
+def test_build_ansatz_accepts_torch_params_with_grad():
+    config = {
+        "layers": 1,
+        "single_qubit_gates": ["rx", "ry"],
+        "two_qubit_gate": "cnot",
+        "entanglement": "linear",
+    }
+
+    create_fn, num_params = build_ansatz(config, 2)
+    params = torch.randn(num_params, requires_grad=True)
+
+    circuit, used_params = create_fn(params)
+
+    assert circuit._nqubits == 2
+    assert used_params == num_params

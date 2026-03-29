@@ -57,7 +57,6 @@ def load_best_config(explicit_path=None):
     for filename in configs_to_try:
         path = os.path.join(exp_dir, filename)
         if os.path.exists(path):
-            import json
             with open(path, "r") as f:
                 config = json.load(f)
             print(f"Loaded config from {path}")

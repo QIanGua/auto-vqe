@@ -1,11 +1,10 @@
 {
     "init_state": "zero",
-    "layers": 4,
+    "layers": 5,
     "single_qubit_gates": [
-        "rx",
         "ry",
         "rz"
     ],
     "two_qubit_gate": "cnot",
-    "entanglement": "ring"
+    "entanglement": "full"
 }

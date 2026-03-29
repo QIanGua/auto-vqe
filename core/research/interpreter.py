@@ -1,5 +1,3 @@
-import os
-import json
 from typing import Any, Dict
 
 from core.model.research_schemas import ActionSpec, DecisionRecord, HypothesisSpec, ResearchMemory, RunBundle
@@ -8,24 +6,8 @@ from core.model.research_schemas import ActionSpec, DecisionRecord, HypothesisSp
 class ResultInterpreter:
     """Convert raw run metrics into research-level decisions."""
 
-    def __init__(self, session_jsonl_path: str):
+    def __init__(self, session_jsonl_path: str | None = None):
         self.session_jsonl_path = session_jsonl_path
-
-    def _best_params_for_error(self, best_err: float) -> int:
-        best_params = 999
-        if not os.path.exists(self.session_jsonl_path):
-            return best_params
-        with open(self.session_jsonl_path, "r", encoding="utf-8") as f:
-            for line in f:
-                try:
-                    record = json.loads(line)
-                except Exception:
-                    continue
-                results = record.get("results", {})
-                recorded_err = results.get("energy_error")
-                if isinstance(recorded_err, (int, float)) and recorded_err <= best_err:
-                    best_params = min(best_params, results.get("num_params", 999))
-        return best_params
 
     def interpret(
         self,
@@ -40,7 +22,13 @@ class ResultInterpreter:
             iteration=iteration,
             memory=memory,
             hypothesis=hypothesis,
-            run=RunBundle(action=action, metrics=metrics, selected_config_path=metrics.get("selected_config_path")),
+            run=RunBundle(
+                action=action,
+                metrics=metrics,
+                target_candidate_id=action.target_candidate_id,
+                selected_candidate_id=metrics.get("selected_candidate_id"),
+                selected_config_path=metrics.get("selected_config_path"),
+            ),
         )
 
     def interpret_run(
@@ -56,7 +44,7 @@ class ResultInterpreter:
         current_err = metrics.get("energy_error", float("inf"))
         current_params = metrics.get("num_params", 999)
         best_err = memory.best_energy_error if memory.best_energy_error is not None else float("inf")
-        best_params = self._best_params_for_error(best_err)
+        best_params = memory.best_num_params if memory.best_num_params is not None else 999
 
         is_better_energy = isinstance(current_err, (int, float)) and current_err < best_err * 0.95
         is_better_efficiency = (
@@ -96,5 +84,6 @@ class ResultInterpreter:
             evidence_for=evidence_for,
             evidence_against=evidence_against,
             confidence=0.75 if decision == "keep" else 0.55,
+            selected_candidate_id=run.selected_candidate_id or metrics.get("selected_candidate_id"),
             selected_config_path=run.selected_config_path or metrics.get("selected_config_path"),
         )

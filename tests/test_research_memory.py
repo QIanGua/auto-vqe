@@ -35,6 +35,7 @@ def test_research_memory_store_persists_memory_and_jsonl(tmp_path):
         dead_ends=["Deep ring entanglement with tied params"],
     )
     updated.best_energy_error = 1e-3
+    updated.best_num_params = 12
     updated.best_config_path = "/tmp/best.json"
     store.save(updated)
 
@@ -42,6 +43,7 @@ def test_research_memory_store_persists_memory_and_jsonl(tmp_path):
     assert loaded.objective == "Optimize LiH ansatz."
     assert loaded.dead_ends == ["Deep ring entanglement with tied params"]
     assert loaded.next_recommendations == ["Try medium fidelity verification"]
+    assert loaded.best_num_params == 12
     assert store.memory_path.endswith("research_memory.json")
     assert store.jsonl_path.endswith("autoresearch.jsonl")
     assert "Try medium fidelity verification" in store.render_markdown(loaded)
@@ -84,6 +86,7 @@ def test_research_session_preserves_legacy_files_and_metrics(tmp_path):
 
     memory = json.loads(state_dir.joinpath("research_memory.json").read_text(encoding="utf-8"))
     assert memory["best_energy_error"] == 0.0025
+    assert memory["best_num_params"] is None
     assert memory["next_recommendations"] == ["Compare medium fidelity reruns"]
     md = state_dir.joinpath("autoresearch.md").read_text(encoding="utf-8")
     assert "Optimize LiH ansatz to below 1e-6." in md
@@ -102,6 +105,7 @@ def test_research_session_structured_decision_is_primary_write_path(tmp_path):
         summary="Structured path accepted the first baseline.",
         evidence_for=["initial baseline established"],
         confidence=0.9,
+        selected_candidate_id="cand-1",
         selected_config_path="/tmp/config.json",
     )
     run = RunBundle(
@@ -111,8 +115,11 @@ def test_research_session_structured_decision_is_primary_write_path(tmp_path):
             system_dir=str(system_dir),
             action_type="run_strategy",
             strategy_name="ga",
+            target_candidate_id="cand-1",
         ),
         metrics={"energy_error": 0.001, "num_params": 8},
+        target_candidate_id="cand-1",
+        selected_candidate_id="cand-1",
         selected_config_path="/tmp/config.json",
     )
 
@@ -134,4 +141,6 @@ def test_research_session_structured_decision_is_primary_write_path(tmp_path):
 
     memory = json.loads(state_dir.joinpath("research_memory.json").read_text(encoding="utf-8"))
     assert memory["strategy_stats"]["ga"]["keeps"] == 1
+    assert memory["best_num_params"] == 8
+    assert memory["best_candidate_id"] == "cand-1"
     assert memory["next_recommendations"] == ["Verify with medium fidelity"]

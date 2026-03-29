@@ -77,16 +77,6 @@ class ResearchAgent:
                 return json.load(f)
         return {}
 
-    def _build_action(self, iteration: int, hypothesis_id: str) -> ActionSpec:
-        return ActionSpec(
-            action_id=f"{self.strategy}-iter-{iteration:04d}-run",
-            hypothesis_id=hypothesis_id,
-            system_dir=self.system_dir,
-            action_type="run_strategy",
-            strategy_name=self.strategy,
-            fidelity="quick",
-        )
-
     def execute_structured_step(
         self,
         iteration: int,
@@ -110,7 +100,6 @@ class ResearchAgent:
             self.controller.stop(action.rationale or "Policy requested stop.")
             return False, {"decision": "stop"}, None
 
-        action = self._build_action(iteration, hypothesis.hypothesis_id)
         run = self.executor.execute_action(
             action,
             iteration,

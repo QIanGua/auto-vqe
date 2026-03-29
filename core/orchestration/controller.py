@@ -3,6 +3,20 @@ import logging
 from typing import Dict, Any, Optional, List, Tuple
 from core.model.schemas import CandidateSpec, EvaluationResult, EvaluationSpec, AnsatzSpec
 
+
+class PromotionPlan:
+    """A pure promotion decision detached from queue mutation."""
+
+    def __init__(
+        self,
+        candidate: CandidateSpec,
+        previous: EvaluationResult,
+        next_evaluation: EvaluationSpec,
+    ):
+        self.candidate = candidate
+        self.previous = previous
+        self.next_evaluation = next_evaluation
+
 class SearchController:
     """
     实验控制器：管理预算、监测停止规则并驱动搜索策略切换。
@@ -170,7 +184,7 @@ class SearchOrchestrator:
     def promote(
         self,
         results: List[EvaluationResult],
-    ) -> List[CandidateSpec]:
+    ) -> List[PromotionPlan]:
         """
         根据评估结果选择优秀候选晋级到更高级别评估。
         """
@@ -185,21 +199,30 @@ class SearchOrchestrator:
         sorted_results = sorted(valid_results, key=lambda x: x.val_energy)
         num_promote = max(1, len(sorted_results) // 5)
         to_promote = sorted_results[:num_promote]
-        
-        promoted_candidates = []
+
+        plans: List[PromotionPlan] = []
         for res in to_promote:
             # 查找原始 CandidateSpec
             cand = next((c for c in self.candidate_pool if c.candidate_id == res.candidate_id), None)
             if cand:
-                promoted_candidates.append(cand)
-                
                 # 确定下一保真度
                 next_fidelity = "medium" if res.fidelity == "quick" else "full"
                 next_eval_spec = self._promotion_spec(res, next_fidelity)
-                self.evaluation_queue.append((cand, next_eval_spec))
-                
-        self.logger.info(f"Promoted {len(promoted_candidates)} candidates.")
-        return promoted_candidates
+                plans.append(PromotionPlan(cand, res, next_eval_spec))
+
+        self.logger.info(f"Planned promotion for {len(plans)} candidates.")
+        return plans
+
+    def enqueue_promotions(self, promotions: List[PromotionPlan]) -> List[Tuple[CandidateSpec, EvaluationSpec]]:
+        """Materialize promotion plans into the evaluation queue."""
+        scheduled: List[Tuple[CandidateSpec, EvaluationSpec]] = []
+        for plan in promotions:
+            item = (plan.candidate, plan.next_evaluation)
+            self.evaluation_queue.append(item)
+            scheduled.append(item)
+        if promotions:
+            self.logger.info(f"Scheduled {len(promotions)} promoted evaluations.")
+        return scheduled
 
     def schedule_next_batch(self, batch_size: int = 4) -> List[Tuple[CandidateSpec, EvaluationSpec]]:
         """

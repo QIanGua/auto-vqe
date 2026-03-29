@@ -13,13 +13,19 @@ class TFIMEnvironment(QuantumEnvironment):
 
     def compute_energy(self, c):
         import tensorcircuit as tc
+        def get_gate(name):
+            obj = getattr(tc.gates, name, None)
+            if obj is None: obj = getattr(tc.gates, name.upper(), None)
+            if obj is None: obj = getattr(tc.gates, f"{name}_gate", None)
+            return obj() if callable(obj) else obj
+
         energy = 0.0
         # - Z_i Z_{i+1}
         for i in range(self.n_qubits - 1):
-            energy += -c.expectation([tc.gates.z(), [i]], [tc.gates.z(), [i+1]])
+            energy += -c.expectation([get_gate("z"), [i]], [get_gate("z"), [i+1]])
         # - X_i
         for i in range(self.n_qubits):
-            energy += -c.expectation([tc.gates.x(), [i]])
+            energy += -c.expectation([get_gate("x"), [i]])
         return tc.backend.real(energy)
 
 ENV = TFIMEnvironment()

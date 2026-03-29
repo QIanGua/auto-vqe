@@ -1,7 +1,5 @@
-import pytest
-import logging
 from core.model.schemas import CandidateSpec, EvaluationResult, AnsatzSpec
-from core.orchestration.controller import SearchController, SearchOrchestrator
+from core.orchestration.controller import SearchOrchestrator
 
 def test_orchestrator_promotion():
     ansatz = AnsatzSpec(name="a1", n_qubits=2)
@@ -23,19 +21,22 @@ def test_orchestrator_promotion():
         runtime_sec=0.1, actual_steps=5
     )
     
-    promoted = orchestrator.promote([res1, res2])
-    assert len(promoted) == 1
-    assert promoted[0].candidate_id == "c1"
-    
-    # Check if next evaluation is scheduled
-    batch = orchestrator.schedule_next_batch()
-    # Initial quick for c1, c2 (2 items) -> we take 2
-    # Then promote added 1 medium for c1.
-    # Total evaluation_queue was 2 (quick) + 1 (medium) = 3
-    # schedule_next_batch(4) should take all 3 if they were in queue.
-    # Wait, submit_candidates added 2. promote added 1. queue has 2 items left after submit + 1 after promote?
-    # Actually submit_candidates added (c1, quick), (c2, quick).
-    # Then promote added (c1, medium).
-    # Total queue: [(c1, quick), (c2, quick), (c1, medium)]
-    assert len(batch) <= 3 
-    assert any(b[1].fidelity == "medium" for b in batch)
+    promotions = orchestrator.promote([res1, res2])
+    assert len(promotions) == 1
+    assert promotions[0].candidate.candidate_id == "c1"
+    assert promotions[0].next_evaluation.fidelity == "medium"
+
+    # `promote()` should no longer mutate the queue by itself.
+    initial_batch = orchestrator.schedule_next_batch()
+    assert len(initial_batch) == 2
+    assert all(item[1].fidelity == "quick" for item in initial_batch)
+
+    scheduled = orchestrator.enqueue_promotions(promotions)
+    assert len(scheduled) == 1
+    assert scheduled[0][0].candidate_id == "c1"
+    assert scheduled[0][1].fidelity == "medium"
+
+    promoted_batch = orchestrator.schedule_next_batch()
+    assert len(promoted_batch) == 1
+    assert promoted_batch[0][0].candidate_id == "c1"
+    assert promoted_batch[0][1].fidelity == "medium"

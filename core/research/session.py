@@ -47,11 +47,13 @@ class ResearchSession:
             summary=rationale,
             evidence_for=[f"{key}={value}" for key, value in sorted(results.items())],
             confidence=0.5,
+            selected_candidate_id=results.get("selected_candidate_id"),
             selected_config_path=results.get("selected_config_path"),
         )
         run = RunBundle(
             action=action_spec,
             metrics=results,
+            selected_candidate_id=results.get("selected_candidate_id"),
             selected_config_path=results.get("selected_config_path"),
         )
         self.record_structured_decision(decision_record, run)

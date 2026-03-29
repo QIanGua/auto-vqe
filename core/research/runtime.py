@@ -1,6 +1,11 @@
+import argparse
 import datetime
 import os
+import sys
 from typing import Optional
+
+# Allow `python core/research/runtime.py ...` from the repo root.
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from core.research.agent import create_default_research_agent, default_emit, run_single_iteration
 from core.research.session import ResearchSession
@@ -106,8 +111,6 @@ def start_driver(system_dir: str, target_error: float = 1e-6, max_loops: int = 1
 
 
 def main() -> None:
-    import argparse
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", required=True, help="System directory (e.g. experiments/lih)")
     parser.add_argument("--strategy", choices=VALID_STRATEGIES, default="ga")

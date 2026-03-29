@@ -41,6 +41,7 @@ class ActionSpec(BaseModel):
     fidelity: Optional[Literal["quick", "medium", "full"]] = None
     budget: Dict[str, Any] = Field(default_factory=dict)
     config_path: Optional[str] = None
+    target_candidate_id: Optional[str] = None
     candidate_ids: List[str] = Field(default_factory=list)
     search_space_patch: Dict[str, Any] = Field(default_factory=dict)
     rationale: Optional[str] = None
@@ -69,6 +70,7 @@ class ResearchMemory(BaseModel):
     system: str
     objective: str
     best_energy_error: Optional[float] = None
+    best_num_params: Optional[int] = None
     best_candidate_id: Optional[str] = None
     best_config_path: Optional[str] = None
     active_hypotheses: List[HypothesisSpec] = Field(default_factory=list)
@@ -88,6 +90,8 @@ class RunBundle(BaseModel):
     metrics: Dict[str, Any] = Field(default_factory=dict)
     candidate_results: List[EvaluationResult] = Field(default_factory=list)
     artifact_paths: Dict[str, str] = Field(default_factory=dict)
+    target_candidate_id: Optional[str] = None
+    selected_candidate_id: Optional[str] = None
     selected_config_path: Optional[str] = None
     success: bool = True
     error_message: Optional[str] = None
