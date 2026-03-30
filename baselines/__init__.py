@@ -33,9 +33,20 @@ def _merge_config(
     return merged
 
 
+from . import adapt, givens, hea, hva, kupccgsd, qucc, qubit_adapt, uccsd
+
+
 __all__ = [
     "AnsatzSpec",
     "CircuitBuilder",
     "_merge_config",
     "QuantumEnvironment",
+    "adapt",
+    "givens",
+    "hea",
+    "hva",
+    "kupccgsd",
+    "qucc",
+    "qubit_adapt",
+    "uccsd",
 ]

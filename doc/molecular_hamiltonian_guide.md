@@ -251,3 +251,19 @@ register_molecular_builder("nah", spec)
 - 与实验搜索配置自动联动的数据缓存管理
 
 这些可以作为下一步演进方向。
+
+## 10. 标准化学 Ansatz 基准 (Baselines)
+
+在分子模拟中，除了使用搜索策略（如 ADAPT）自动生成电路外，项目还预置了多种成熟的标准量子化学基准。这些基准实现在 `baselines/` 目录中，均遵循 `AnsatzSpec` 架构：
+
+- **Givens 旋转 UCC** (`baselines/givens.py`)：高性能的对称性保持单/双激发线路。
+- **k-UpCCGSD** (`baselines/kupccgsd.py`)：支持强相关的分层广义配对单一双激发结构。
+- **QUCC** (`baselines/qucc.py`)：基于 Qubit 算子分解的轻量级 UCC 实现。
+- **UCCSD** (`baselines/uccsd.py`)：标准的 Trotter 展开 UCCSD 实现。
+
+使用基准时，可以直接导入并构建：
+```python
+from baselines import givens
+# 获取指定环境下的 1 层 Givens 基准
+spec = givens.build_ansatz(env, {"layers": 1})
+```

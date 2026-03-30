@@ -63,8 +63,9 @@ class ResearchAgent:
     def _default_recommendations(self) -> List[str]:
         return ["继续扩大搜索空间", "尝试增加更多层数"]
 
-    def _default_dead_end(self, iteration: int) -> List[str]:
-        return [f"{self.strategy}: no pareto improvement at iteration {iteration}"]
+    def _default_dead_end(self, iteration: int, failure_type: Optional[str], strategy_name: str) -> List[str]:
+        label = failure_type or "no_pareto_improvement"
+        return [f"{strategy_name}: {label} at iteration {iteration}"]
 
     def _load_best_config(self, selected_config_path: Optional[str]) -> Dict[str, Any]:
         config_path = selected_config_path
@@ -108,12 +109,9 @@ class ResearchAgent:
             emit=self.emit,
             emit_stream_line=self.emit_stream_line,
         )
+        executed_strategy = action.strategy_name or self.strategy
         success = run.success
         metrics = run.metrics
-
-        if not success:
-            self.controller.report_result(metrics, is_failure=True)
-            return False, metrics, run
 
         decision = self.interpreter.interpret_run(
             iteration=iteration,
@@ -130,16 +128,29 @@ class ResearchAgent:
                 objective=self._default_objective(),
                 best_config=best_config,
                 next_hypotheses=self._default_recommendations(),
-                strategy_name=self.strategy,
+                strategy_name=executed_strategy,
             )
         else:
             self.session.apply_structured_outcome(
                 decision,
                 run,
-                dead_ends=self._default_dead_end(iteration),
+                dead_ends=self._default_dead_end(iteration, decision.failure_type, executed_strategy),
                 next_hypotheses=self._default_recommendations(),
-                strategy_name=self.strategy,
+                strategy_name=executed_strategy,
             )
+
+        if action.action_type == "switch_strategy" and action.strategy_name:
+            self.strategy = action.strategy_name
+            if hasattr(self.policy_engine, "update_strategy"):
+                self.policy_engine.update_strategy(action.strategy_name)
+
+        pending_action_id = action.budget.get("pending_action_id") if isinstance(action.budget, dict) else None
+        if isinstance(pending_action_id, str):
+            self.session.consume_pending_action(pending_action_id)
+
+        if not success:
+            self.controller.report_result(metrics, is_failure=True)
+            return False, metrics, run
 
         self.controller.report_result(metrics, is_failure=False)
         return True, metrics, run
@@ -182,6 +193,7 @@ def create_default_research_agent(
     system_dir: str,
     strategy: str,
     session: ResearchSession,
+    available_strategies: tuple[str, ...] = ("ga", "multidim", "adapt", "qubit_adapt"),
     log_path: Optional[str] = None,
     session_dir: Optional[str] = None,
     emit: Optional[Callable[[str, Optional[str]], None]] = None,
@@ -191,7 +203,7 @@ def create_default_research_agent(
         system_dir=system_dir,
         strategy=strategy,
         session=session,
-        policy_engine=PolicyEngine(strategy),
+        policy_engine=PolicyEngine(strategy, available_strategies=available_strategies),
         executor=ExperimentExecutor(subprocess_module=subprocess),
         log_path=log_path,
         session_dir=session_dir,
@@ -206,6 +218,7 @@ def run_single_iteration(
     iteration: int,
     session: ResearchSession,
     strategy: str,
+    available_strategies: tuple[str, ...] = ("ga", "multidim", "adapt", "qubit_adapt"),
     session_dir: Optional[str] = None,
     log_path: Optional[str] = None,
     emit: Optional[Callable[[str, Optional[str]], None]] = None,
@@ -215,6 +228,7 @@ def run_single_iteration(
         system_dir=system_dir,
         strategy=strategy,
         session=session,
+        available_strategies=available_strategies,
         log_path=log_path,
         session_dir=session_dir,
         emit=emit,

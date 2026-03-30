@@ -382,6 +382,43 @@ Notable coverage areas:
 - ADAPT prototype behavior
 - run-script CLI smoke tests
 
+## AI Agent Skill
+
+This repository ships with a built-in [Antigravity](https://github.com/google-deepmind/antigravity) Skill that helps AI coding assistants understand and operate the project without reading the full source code.
+
+The Skill is located at `.gemini/skills/agent-vqe/` and is automatically discovered when you open this repo in an Antigravity-compatible environment.
+
+### What the Skill covers
+
+| Scenario | Reference |
+|----------|-----------|
+| Installation & first run | `references/quickstart.md` |
+| Structural search (GA / MultiDim / ADAPT / Qubit-ADAPT) | `references/structural-search.md` |
+| Agent research loop & failure taxonomy | `references/agent-research-loop.md` |
+| Molecular Hamiltonian generation | `references/molecular-hamiltonian.md` |
+| Architecture design & extension guide | `references/architecture-extension.md` |
+| Troubleshooting & common pitfalls | `references/troubleshooting.md` |
+
+### Example scripts
+
+Runnable examples are provided in `.gemini/skills/agent-vqe/examples/`:
+
+```bash
+# Basic verification demo
+PYTHONPATH=. uv run python .gemini/skills/agent-vqe/examples/basic_verification.py --system tfim
+
+# Agent API walkthrough (MemoryStore / PolicyEngine / Interpreter)
+PYTHONPATH=. uv run python .gemini/skills/agent-vqe/examples/agent_api_usage.py --demo all
+```
+
+### Global installation (optional)
+
+To make the Skill available across all workspaces:
+
+```bash
+ln -s "$(pwd)/.gemini/skills/agent-vqe" ~/.gemini/antigravity/skills/agent-vqe
+```
+
 ## Related docs
 
 - `Plan.md`: current project status and roadmap
@@ -502,3 +539,27 @@ ResearchAgent
 - 统一 GA、Grid、ADAPT、Baseline 的评估口径
 - 把实验日志、报告、Git 状态和运行环境一起记录下来，保证可审计
 - 为更长周期的自动科研循环保留 session / resume 机制
+
+## AI Agent Skill
+
+本仓库内置了一套 [Antigravity](https://github.com/google-deepmind/antigravity) Skill（位于 `.gemini/skills/agent-vqe/`），让 AI 编程助手无需通读源码即可理解和操作本项目。
+
+克隆本仓库后，Antigravity 兼容环境会自动发现该 Skill。Skill 采用渐进式加载架构，覆盖 6 大使用场景：
+
+| 场景 | 参考文档 |
+|------|---------|
+| 安装与首次运行 | `references/quickstart.md` |
+| 结构搜索（GA / MultiDim / ADAPT / Qubit-ADAPT） | `references/structural-search.md` |
+| Agent 研究循环与失败归因 | `references/agent-research-loop.md` |
+| 分子哈密顿量生成 | `references/molecular-hamiltonian.md` |
+| 架构设计与扩展开发 | `references/architecture-extension.md` |
+| 故障排除 | `references/troubleshooting.md` |
+
+同时提供 3 个可执行示例脚本（位于 `.gemini/skills/agent-vqe/examples/`），覆盖验证实验、自定义搜索和 Agent API 使用。
+
+如需全局安装：
+
+```bash
+ln -s "$(pwd)/.gemini/skills/agent-vqe" ~/.gemini/antigravity/skills/agent-vqe
+```
+

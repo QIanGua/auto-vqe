@@ -3,7 +3,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
-from core.model.research_schemas import DecisionRecord, ResearchMemory, RunBundle
+from core.model.research_schemas import ActionSpec, DecisionRecord, ResearchMemory, RunBundle
 
 
 class ResearchMemoryStore:
@@ -47,6 +47,8 @@ class ResearchMemoryStore:
             "evidence_for": decision.evidence_for,
             "evidence_against": decision.evidence_against,
             "confidence": decision.confidence,
+            "failure_type": decision.failure_type,
+            "failure_signals": decision.failure_signals,
             "selected_config_path": decision.selected_config_path,
             "selected_candidate_id": decision.selected_candidate_id,
             "followup_actions": decision.followup_actions,
@@ -82,6 +84,78 @@ class ResearchMemoryStore:
         with open(self.jsonl_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
+    def _default_search_space_patch(self, decision: DecisionRecord) -> Dict[str, Any]:
+        if decision.failure_type in {"gradient_collapse", "optimizer_stall"}:
+            return {"layers": "shrink", "entanglement": "simplify"}
+        if decision.failure_type == "parameter_inefficiency":
+            return {"layers": "shrink"}
+        if decision.failure_type == "warmstart_failure":
+            return {"entanglement": "simplify"}
+        return {"layers": "shrink", "entanglement": "simplify"}
+
+    def _build_pending_actions(self, decision: DecisionRecord, run: Optional[RunBundle]) -> List[ActionSpec]:
+        if run is None:
+            return []
+
+        pending: List[ActionSpec] = []
+        base_action = run.action
+        target_candidate_id = run.selected_candidate_id or run.target_candidate_id or decision.selected_candidate_id
+        selected_config_path = run.selected_config_path or decision.selected_config_path
+        for index, followup in enumerate(decision.followup_actions, start=1):
+            if followup == "switch_strategy":
+                pending.append(
+                    ActionSpec(
+                        action_id=f"{decision.decision_id}-followup-{index}",
+                        hypothesis_id=decision.hypothesis_id,
+                        system_dir=base_action.system_dir,
+                        action_type="switch_strategy",
+                        strategy_name=None,
+                        fidelity="quick",
+                        target_candidate_id=target_candidate_id,
+                        config_path=selected_config_path,
+                        rationale=f"Queued from decision {decision.decision_id}: {decision.failure_type or 'followup'}",
+                    )
+                )
+            elif followup == "reduce_search_space":
+                pending.append(
+                    ActionSpec(
+                        action_id=f"{decision.decision_id}-followup-{index}",
+                        hypothesis_id=decision.hypothesis_id,
+                        system_dir=base_action.system_dir,
+                        action_type="reduce_search_space",
+                        strategy_name=base_action.strategy_name,
+                        fidelity=base_action.fidelity or "quick",
+                        target_candidate_id=target_candidate_id,
+                        config_path=selected_config_path,
+                        search_space_patch=self._default_search_space_patch(decision),
+                        rationale=f"Queued from decision {decision.decision_id}: {decision.failure_type or 'followup'}",
+                    )
+                )
+            elif followup == "retry_same_strategy":
+                pending.append(
+                    ActionSpec(
+                        action_id=f"{decision.decision_id}-followup-{index}",
+                        hypothesis_id=decision.hypothesis_id,
+                        system_dir=base_action.system_dir,
+                        action_type="run_strategy",
+                        strategy_name=base_action.strategy_name,
+                        fidelity=base_action.fidelity or "quick",
+                        target_candidate_id=target_candidate_id,
+                        config_path=selected_config_path,
+                        rationale=f"Queued retry from decision {decision.decision_id}.",
+                    )
+                )
+        return pending
+
+    def _pending_action_key(self, action: ActionSpec) -> tuple[Any, ...]:
+        return (
+            action.action_type,
+            action.strategy_name,
+            action.config_path,
+            action.target_candidate_id,
+            tuple(sorted(action.search_space_patch.items())),
+        )
+
     def apply_decision_to_memory(
         self,
         memory: ResearchMemory,
@@ -97,6 +171,16 @@ class ResearchMemoryStore:
         if objective:
             memory.objective = objective
         memory.last_decision = decision
+        if decision.failure_type:
+            memory.failure_counts[decision.failure_type] = memory.failure_counts.get(decision.failure_type, 0) + 1
+            memory.recent_failure_modes.append(decision.failure_type)
+            memory.recent_failure_modes = memory.recent_failure_modes[-10:]
+        existing_pending_keys = {self._pending_action_key(action) for action in memory.pending_actions}
+        for action in self._build_pending_actions(decision, run):
+            key = self._pending_action_key(action)
+            if key not in existing_pending_keys:
+                memory.pending_actions.append(action)
+                existing_pending_keys.add(key)
         if decision.decision in {"keep", "promote"}:
             if decision.hypothesis_id not in memory.accepted_hypotheses:
                 memory.accepted_hypotheses.append(decision.hypothesis_id)
@@ -150,6 +234,12 @@ class ResearchMemoryStore:
                         memory.best_candidate_id = decision.selected_candidate_id
         return memory
 
+    def consume_pending_action(self, action_id: str) -> ResearchMemory:
+        memory = self.load()
+        memory.pending_actions = [action for action in memory.pending_actions if action.action_id != action_id]
+        self.save(memory)
+        return memory
+
     def update_from_decision(
         self,
         decision: DecisionRecord,
@@ -177,6 +267,11 @@ class ResearchMemoryStore:
 
     def render_markdown(self, memory: ResearchMemory) -> str:
         dead_ends = "\n".join(f"- {item}" for item in memory.dead_ends) or "- None yet"
+        recent_failures = "\n".join(f"- {item}" for item in memory.recent_failure_modes) or "- None yet"
+        pending_actions = "\n".join(
+            f"- {action.action_type}:{action.strategy_name or 'auto'} ({action.rationale or 'no rationale'})"
+            for action in memory.pending_actions
+        ) or "- None yet"
         next_hypotheses = "\n".join(f"- {item}" for item in memory.next_recommendations) or "- None yet"
         insights = "\n".join(f"- {item}" for item in memory.transferable_insights) or "- None yet"
         best_config = memory.best_config_path or "N/A"
@@ -199,6 +294,12 @@ class ResearchMemoryStore:
 
 ## Dead Ends
 {dead_ends}
+
+## Recent Failure Modes
+{recent_failures}
+
+## Pending Actions
+{pending_actions}
 
 ## Transferable Insights
 {insights}

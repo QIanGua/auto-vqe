@@ -82,10 +82,19 @@ def _is_structured_ansatz_spec(config: Dict[str, Any]) -> bool:
 
 def load_best_config(manifest: ExperimentManifest, explicit_path: Optional[str] = None) -> tuple[Dict[str, Any], str]:
     if explicit_path:
+        # Check if it's an inline JSON string
+        stripped = explicit_path.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                return json.loads(explicit_path), "inline_json"
+            except json.JSONDecodeError:
+                pass
+        
+        # Otherwise treat as path
         if os.path.exists(explicit_path):
             with open(explicit_path, "r", encoding="utf-8") as f:
                 return json.load(f), explicit_path
-        print(f"Warning: Explicit config path {explicit_path} not found. Falling back.")
+        print(f"Warning: Explicit config path/JSON {explicit_path} not found. Falling back.")
 
     for relative_path in manifest.config_priority:
         path = os.path.join(manifest.system_dir, relative_path)
@@ -113,6 +122,8 @@ def run_config_experiment(
     *,
     trials: Optional[int] = None,
     explicit_config_path: Optional[str] = None,
+    max_steps: Optional[int] = None,
+    lr: Optional[float] = None,
 ) -> Dict[str, Any]:
     import torch
 
@@ -156,8 +167,8 @@ def run_config_experiment(
             n_qubits=env.n_qubits,
             exact_energy=env.exact_energy,
             num_params=num_params,
-            max_steps=manifest.run_max_steps,
-            lr=manifest.run_lr,
+            max_steps=max_steps or manifest.run_max_steps,
+            lr=lr or manifest.run_lr,
             logger=logger,
         )
         if results["val_energy"] < overall_best_energy:
@@ -182,7 +193,18 @@ def run_config_experiment(
         config_path=config_path,
     )
     logger.info(f"Run record generated at: {record_path}")
-    return best_results
+    if best_results:
+        best_results["run_json_path"] = record_path
+        best_results["run_dir"] = exp_dir
+        best_results["selected_config_path"] = config_path
+        if os.environ.get("AGENT_VQE_ACTION_TYPE") or os.environ.get("AGENT_VQE_EMIT_METRICS") == "1":
+            print(f"METRIC run_json_path={record_path}")
+            print(f"METRIC run_dir={exp_dir}")
+            print(f"METRIC selected_config_path={config_path}")
+        return best_results
+    else:
+        logger.error("No successful trials in run_config_experiment.")
+        return {}
 
 
 def run_baseline_experiment(manifest: ExperimentManifest, *, trials: Optional[int] = None) -> Dict[str, Any]:
@@ -240,24 +262,32 @@ def run_baseline_experiment(manifest: ExperimentManifest, *, trials: Optional[in
 
     logger.info("\n=== Baseline Best ===")
     print_results(best_results, logger=logger)
-    log_results(
-        exp_dir,
-        manifest.baseline.result_label,
-        best_results,
-        comment=f"Baseline spec: {ansatz_spec_dict}",
-    )
-    record_path = generate_report(
-        exp_dir,
-        manifest.baseline.report_label,
-        best_results,
-        create_circuit,
-        ansatz_spec=ansatz_spec_dict,
-    )
-    logger.info(f"Run record generated at: {record_path}")
-    return best_results
+    if best_results:
+        log_results(
+            exp_dir,
+            manifest.baseline.result_label,
+            best_results,
+            comment=f"Baseline spec: {ansatz_spec_dict}",
+        )
+        record_path = generate_report(
+            exp_dir,
+            manifest.baseline.report_label,
+            best_results,
+            create_circuit,
+            ansatz_spec=ansatz_spec_dict,
+        )
+        logger.info(f"Run record generated at: {record_path}")
+        return best_results
+    else:
+        logger.error("No successful trials in baseline.")
+        return {}
 
 
-def run_search_experiment(manifest: ExperimentManifest, strategy_name: str) -> Dict[str, Any]:
+def run_search_experiment(
+    manifest: ExperimentManifest,
+    strategy_name: str,
+    initial_config_path: Optional[str] = None,
+) -> Dict[str, Any]:
     from core.evaluator.api import prepare_experiment_dir
     from core.generator.adapt import AdaptVQEStrategy, build_fermionic_adapt_pool, build_qubit_adapt_pool
     from core.generator.ga import GASearchStrategy
@@ -268,13 +298,25 @@ def run_search_experiment(manifest: ExperimentManifest, strategy_name: str) -> D
     spec = manifest.searches[strategy_name]
     exp_dir = prepare_experiment_dir(manifest.runs_dir, spec.run_slug)
 
+    initial_ansatz = None
+    if initial_config_path and os.path.exists(initial_config_path):
+        with open(initial_config_path, "r", encoding="utf-8") as f:
+            initial_cfg = json.load(f)
+        from core.model.schemas import AnsatzSpec
+        initial_ansatz = AnsatzSpec(
+            name="warm_start_base",
+            family=initial_cfg.get("family", "hea"),
+            n_qubits=env.n_qubits,
+            config=initial_cfg,
+        )
+
     if spec.kind == "ga":
         result = GASearchStrategy(
             env=env,
             make_circuit_fn=manifest.build_circuit,
             dimensions=spec.dimensions,
-            pop_size=spec.pop_size,
-            generations=spec.generations,
+            pop_size=spec.pop_size or 8,
+            generations=spec.generations or 4,
             mutation_rate=spec.mutation_rate or 0.3,
             elite_count=spec.elite_count or 2,
             trials_per_config=spec.trials_per_config,
@@ -303,6 +345,7 @@ def run_search_experiment(manifest: ExperimentManifest, strategy_name: str) -> D
             gradient_epsilon=float(adapt_cfg.get("gradient_epsilon", 1e-3)),
             gradient_tol=float(adapt_cfg.get("gradient_tol", 1e-4)),
             max_adapt_steps=int(adapt_cfg.get("max_adapt_steps", 8)),
+            initial_ansatz=initial_ansatz,
         )
         result = strategy.run()
     elif spec.kind == "qubit_adapt":
@@ -317,6 +360,7 @@ def run_search_experiment(manifest: ExperimentManifest, strategy_name: str) -> D
             gradient_epsilon=float(adapt_cfg.get("gradient_epsilon", 1e-3)),
             gradient_tol=float(adapt_cfg.get("gradient_tol", 1e-4)),
             max_adapt_steps=int(adapt_cfg.get("max_adapt_steps", 8)),
+            initial_ansatz=initial_ansatz,
         )
         result = strategy.run()
     else:
@@ -344,7 +388,7 @@ def run_orchestration_experiment(manifest: ExperimentManifest) -> list[dict[str,
         "logger": None,
     }
     if spec.failure_limit is not None:
-        controller_kwargs["failure_limit"] = spec.failure_limit
+        controller_kwargs["failure_limit"] = int(spec.failure_limit)
     controller = SearchController(**controller_kwargs)
 
     generators = []
@@ -389,8 +433,9 @@ def run_research_step(
     *,
     strategy_name: str,
     verify_trials: int,
+    initial_config_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    result = run_search_experiment(manifest, strategy_name)
+    result = run_search_experiment(manifest, strategy_name, initial_config_path=initial_config_path)
     config_path = result.get("best_config_path")
     if not isinstance(config_path, str) or not os.path.exists(config_path):
         raise FileNotFoundError(f"No verifiable config produced for strategy '{strategy_name}'.")

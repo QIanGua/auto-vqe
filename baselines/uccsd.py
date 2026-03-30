@@ -52,7 +52,7 @@ def _default_config_for_env(env: QuantumEnvironment) -> Dict[str, Any]:
     }
 
 
-def _resolve_orbitals(config: Dict[str, Any], n_qubits: int) -> tuple[List[int], List[int]]:
+def resolve_orbitals(config: Dict[str, Any], n_qubits: int) -> tuple[List[int], List[int]]:
     occupied = list(config.get("occupied_orbitals", config.get("hf_qubits", [])))
     if not occupied:
         occupied = list(range(n_qubits // 2))
@@ -91,7 +91,7 @@ def _double_excitation(occupied_pair: Sequence[int], virtual_pair: Sequence[int]
     }
 
 
-def _enumerate_excitations(
+def enumerate_excitations(
     occupied: Sequence[int],
     virtual: Sequence[int],
     include_singles: bool,
@@ -181,8 +181,8 @@ def build_excitation_records(
     config: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     final_cfg = _merge_config(_default_config_for_env(env), config)
-    occupied, virtual = _resolve_orbitals(final_cfg, env.n_qubits)
-    excitations = _enumerate_excitations(
+    occupied, virtual = resolve_orbitals(final_cfg, env.n_qubits)
+    excitations = enumerate_excitations(
         occupied=occupied,
         virtual=virtual,
         include_singles=bool(final_cfg.get("include_singles", True)),
@@ -299,7 +299,7 @@ def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) 
     if layers <= 0:
         raise ValueError(f"layers must be positive, got {layers}")
 
-    occupied, virtual = _resolve_orbitals(final_cfg, n_qubits)
+    occupied, virtual = resolve_orbitals(final_cfg, n_qubits)
     excitation_records = build_excitation_records(env, final_cfg)
     if not excitation_records:
         raise ValueError("Minimal UCCSD baseline generated zero excitations")
@@ -334,4 +334,10 @@ def build_ansatz(env: QuantumEnvironment, config: Dict[str, Any] | None = None) 
     )
 
 
-__all__ = ["build_ansatz", "build_excitation_records", "build_excitation_operator_pool"]
+__all__ = [
+    "build_ansatz",
+    "build_excitation_records",
+    "build_excitation_operator_pool",
+    "resolve_orbitals",
+    "enumerate_excitations",
+]

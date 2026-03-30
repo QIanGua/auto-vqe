@@ -24,6 +24,7 @@ class ExperimentExecutor:
             "verify_config": self._execute_verify_config_action,
             "promote_candidate": self._execute_promote_candidate_action,
             "reduce_search_space": self._execute_reduce_search_space_action,
+            "switch_strategy": self._execute_switch_strategy_action,
         }
 
     def _action_dir(self, system_dir: str, session_dir: Optional[str]) -> str:
@@ -85,6 +86,7 @@ class ExperimentExecutor:
         log_path: Optional[str] = None,
         emit=None,
         emit_stream_line=None,
+        initial_config_path: Optional[str] = None,
     ) -> Tuple[bool, Dict[str, Any]]:
         if emit is not None:
             emit(f"\n>>> Iteration {iteration} Starting... strategy={strategy}", log_path)
@@ -93,18 +95,24 @@ class ExperimentExecutor:
         if session_dir:
             env["AGENT_VQE_SESSION_DIR"] = session_dir
         env["AGENT_VQE_ITERATION"] = f"iter_{iteration:04d}"
+        env["AGENT_VQE_ACTION_TYPE"] = "run_strategy"
+
+        cmd = [
+            "uv",
+            "run",
+            "python",
+            os.path.join(system_dir, "run.py"),
+            "research-step",
+            "--strategy",
+            strategy,
+            "--verify-trials",
+            "2",
+        ]
+        if initial_config_path:
+            cmd.extend(["--initial-config", initial_config_path])
+
         result = self._run_process(
-            [
-                "uv",
-                "run",
-                "python",
-                os.path.join(system_dir, "run.py"),
-                "research-step",
-                "--strategy",
-                strategy,
-                "--verify-trials",
-                "2",
-            ],
+            cmd,
             env=env,
             log_path=log_path,
             emit=emit,
@@ -190,7 +198,15 @@ class ExperimentExecutor:
             selected_candidate_id=target_candidate_id,
             selected_config_path=config_path,
             success=success,
-            artifact_paths={"selected_config_path": config_path},
+            artifact_paths={
+                key: value
+                for key, value in {
+                    "selected_config_path": config_path,
+                    "run_json_path": metrics.get("run_json_path"),
+                    "run_dir": metrics.get("run_dir"),
+                }.items()
+                if isinstance(value, str)
+            },
             error_message=None if success else "Verification failed to produce energy_error metric.",
         )
 
@@ -254,6 +270,7 @@ class ExperimentExecutor:
             log_path=log_path,
             emit=emit,
             emit_stream_line=emit_stream_line,
+            initial_config_path=action.config_path,
         )
         selected_config_path = metrics.get("selected_config_path")
         selected_candidate_id = metrics.get("selected_candidate_id")
@@ -266,9 +283,39 @@ class ExperimentExecutor:
             selected_candidate_id=selected_candidate_id if isinstance(selected_candidate_id, str) else None,
             selected_config_path=selected_config_path if isinstance(selected_config_path, str) else None,
             success=success,
-            artifact_paths={"selected_config_path": selected_config_path} if isinstance(selected_config_path, str) else {},
+            artifact_paths={
+                key: value
+                for key, value in {
+                    "selected_config_path": selected_config_path,
+                    "run_json_path": metrics.get("run_json_path"),
+                    "run_dir": metrics.get("run_dir"),
+                }.items()
+                if isinstance(value, str)
+            },
             error_message=None if success else "Benchmark failed to produce energy_error metric.",
         )
+
+    def _execute_switch_strategy_action(
+        self,
+        action: ActionSpec,
+        iteration: int,
+        *,
+        log_path: Optional[str] = None,
+        session_dir: Optional[str] = None,
+        emit=None,
+        emit_stream_line=None,
+    ) -> RunBundle:
+        run = self._execute_run_strategy_action(
+            action,
+            iteration,
+            log_path=log_path,
+            session_dir=session_dir,
+            emit=emit,
+            emit_stream_line=emit_stream_line,
+        )
+        if action.strategy_name:
+            run.metrics.setdefault("selected_strategy", action.strategy_name)
+        return run
 
     def _execute_verify_config_action(
         self,

@@ -527,12 +527,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run LiH experiments from one entrypoint.")
     parser.add_argument("--config", type=str, help="Path to explicit ansatz config JSON.")
     parser.add_argument("--trials", type=int, default=MANIFEST.run_default_trials, help="Number of trials with different seeds.")
+    parser.add_argument("--max-steps", type=int, default=MANIFEST.run_max_steps, help="Max VQE optimization steps.")
+    parser.add_argument("--lr", type=float, default=MANIFEST.run_lr, help="VQE optimization learning rate.")
 
     subparsers = parser.add_subparsers(dest="command")
 
     verify = subparsers.add_parser("verify", help="Verify the best-known or explicit config.")
     verify.add_argument("--config", type=str, help="Path to explicit ansatz config JSON.")
     verify.add_argument("--trials", type=int, default=MANIFEST.run_default_trials, help="Number of trials.")
+    verify.add_argument("--max-steps", type=int, default=MANIFEST.run_max_steps, help="Max VQE optimization steps.")
+    verify.add_argument("--lr", type=float, default=MANIFEST.run_lr, help="VQE optimization learning rate.")
 
     search = subparsers.add_parser("search", help="Run a structural search.")
     search.add_argument("strategy", choices=sorted(MANIFEST.searches.keys()))
@@ -559,6 +563,7 @@ def build_parser() -> argparse.ArgumentParser:
     research = subparsers.add_parser("research-step", help="Run one research-loop search+verify iteration.")
     research.add_argument("--strategy", required=True, choices=sorted(MANIFEST.searches.keys()))
     research.add_argument("--verify-trials", type=int, default=2)
+    research.add_argument("--initial-config", type=str, help="Path to initial ansatz config for strategy warmup.")
 
     return parser
 
@@ -566,9 +571,13 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None):
     args = build_parser().parse_args(argv)
     if args.command is None:
-        return run_config_experiment(MANIFEST, trials=args.trials, explicit_config_path=args.config)
+        return run_config_experiment(
+            MANIFEST, trials=args.trials, explicit_config_path=args.config, max_steps=args.max_steps, lr=args.lr
+        )
     if args.command == "verify":
-        return run_config_experiment(MANIFEST, trials=args.trials, explicit_config_path=args.config)
+        return run_config_experiment(
+            MANIFEST, trials=args.trials, explicit_config_path=args.config, max_steps=args.max_steps, lr=args.lr
+        )
     if args.command == "search":
         return run_search_experiment(MANIFEST, args.strategy)
     if args.command == "baseline":
@@ -582,7 +591,12 @@ def main(argv: list[str] | None = None):
     if args.command == "compare":
         return run_mindquantum_compare(args.dist, args.data_dir, args.save_json)
     if args.command == "research-step":
-        return run_research_step(MANIFEST, strategy_name=args.strategy, verify_trials=args.verify_trials)
+        return run_research_step(
+            MANIFEST,
+            strategy_name=args.strategy,
+            verify_trials=args.verify_trials,
+            initial_config_path=args.initial_config,
+        )
     raise ValueError(f"Unknown command: {args.command}")
 
 

@@ -32,6 +32,8 @@ def test_executor_returns_run_bundle_from_legacy_metrics(tmp_path):
                 "METRIC energy_error=0.00042\n",
                 "METRIC num_params=12\n",
                 "METRIC selected_config_path=/tmp/best.json\n",
+                "METRIC run_json_path=/tmp/run.json\n",
+                "METRIC run_dir=/tmp/run_dir\n",
             ]
         )
     )
@@ -49,6 +51,8 @@ def test_executor_returns_run_bundle_from_legacy_metrics(tmp_path):
     assert run.success is True
     assert run.metrics["energy_error"] == 0.00042
     assert run.selected_config_path == "/tmp/best.json"
+    assert run.artifact_paths["run_json_path"] == "/tmp/run.json"
+    assert run.artifact_paths["run_dir"] == "/tmp/run_dir"
 
 
 def test_interpreter_accepts_run_bundle(tmp_path):
@@ -67,7 +71,7 @@ def test_interpreter_accepts_run_bundle(tmp_path):
         subprocess_module=DummySubprocess(
             [
                 "METRIC val_energy=-7.88\n",
-                "METRIC energy_error=0.0012\n",
+                "METRIC energy_error=0.00102\n",
                 "METRIC num_params=18\n",
             ]
         )
@@ -82,6 +86,36 @@ def test_interpreter_accepts_run_bundle(tmp_path):
 
     assert decision.decision == "discard"
     assert decision.summary.startswith("Energy:")
+    assert decision.failure_type == "parameter_inefficiency"
+
+
+def test_interpreter_classifies_execution_failure_with_followup(tmp_path):
+    interpreter = ResultInterpreter(str(tmp_path / "autoresearch.jsonl"))
+    memory = ResearchMemory(system="lih", objective="Optimize LiH ansatz.")
+    action = ActionSpec(
+        action_id="a-fail",
+        hypothesis_id="h1",
+        system_dir=str(tmp_path),
+        action_type="run_strategy",
+        strategy_name="ga",
+    )
+    from core.model.research_schemas import RunBundle
+
+    decision = interpreter.interpret_run(
+        iteration=3,
+        memory=memory,
+        hypothesis=policy_hypothesis(),
+        run=RunBundle(
+            action=action,
+            metrics={"stderr_excerpt": "optimizer crashed"},
+            success=False,
+            error_message="Benchmark failed to produce energy_error metric.",
+        ),
+    )
+
+    assert decision.decision == "refine"
+    assert decision.failure_type == "execution_failure"
+    assert "switch_strategy" in decision.followup_actions
 
 
 def test_executor_reduce_search_space_generates_patched_config_then_verifies(tmp_path):
@@ -191,6 +225,45 @@ def test_executor_promote_candidate_verifies_selected_config_with_fidelity_trial
     assert run.target_candidate_id == "c-1"
     assert run.selected_candidate_id == "c-1"
     assert run.metrics["promoted_candidate_ids"] == ["c-1"]
+
+
+def test_executor_switch_strategy_dispatches_selected_strategy(tmp_path):
+    system_dir = tmp_path / "experiments" / "lih"
+    system_dir.mkdir(parents=True)
+    (system_dir / "run.py").write_text("# test stub\n", encoding="utf-8")
+
+    captured = {}
+
+    class RecordingSubprocess(DummySubprocess):
+        def Popen(self, *args, **kwargs):
+            captured["cmd"] = args[0]
+            captured["env"] = kwargs["env"]
+            return DummyProcess(
+                [
+                    "METRIC val_energy=-7.90\n",
+                    "METRIC energy_error=0.00031\n",
+                    "METRIC num_params=10\n",
+                    "METRIC selected_strategy=multidim\n",
+                    "METRIC run_json_path=/tmp/multidim_run.json\n",
+                ]
+            )
+
+    action = ActionSpec(
+        action_id="switch-1",
+        hypothesis_id="h1",
+        system_dir=str(system_dir),
+        action_type="switch_strategy",
+        strategy_name="multidim",
+        fidelity="quick",
+    )
+    executor = ExperimentExecutor(subprocess_module=RecordingSubprocess([]))
+
+    run = executor.execute_action(action, 4, session_dir=str(tmp_path / "session"))
+
+    assert run.success is True
+    assert captured["cmd"][-5:] == ["research-step", "--strategy", "multidim", "--verify-trials", "2"]
+    assert run.metrics["selected_strategy"] == "multidim"
+    assert run.artifact_paths["run_json_path"] == "/tmp/multidim_run.json"
 
 
 def policy_hypothesis():

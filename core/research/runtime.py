@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import importlib.util
 import os
 import sys
 from typing import Optional
@@ -10,7 +11,27 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 from core.research.agent import create_default_research_agent, default_emit, run_single_iteration
 from core.research.session import ResearchSession
 
-VALID_STRATEGIES = ("ga", "multidim")
+VALID_STRATEGIES = ("ga", "multidim", "adapt", "qubit_adapt")
+
+
+def discover_available_strategies(system_dir: str) -> tuple[str, ...]:
+    run_path = os.path.join(system_dir, "run.py")
+    if not os.path.exists(run_path):
+        return VALID_STRATEGIES
+
+    module_name = f"agent_vqe_runtime_manifest_{abs(hash(os.path.abspath(system_dir)))}"
+    spec = importlib.util.spec_from_file_location(module_name, run_path)
+    if spec is None or spec.loader is None:
+        return VALID_STRATEGIES
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    manifest = getattr(module, "MANIFEST", None)
+    searches = getattr(manifest, "searches", None)
+    if isinstance(searches, dict) and searches:
+        return tuple(searches.keys())
+    return VALID_STRATEGIES
 
 
 def session_pointer_path(system_dir: str, strategy: str) -> str:
@@ -55,6 +76,7 @@ def run_iteration(
         iteration=iteration,
         session=session,
         strategy=strategy,
+        available_strategies=discover_available_strategies(system_dir),
         log_path=log_path,
         session_dir=session_dir,
         emit=default_emit,
@@ -67,7 +89,8 @@ def start_driver_with_strategy(
     target_error: float = 1e-6,
     max_loops: int = 100,
 ):
-    if strategy not in VALID_STRATEGIES:
+    available_strategies = discover_available_strategies(system_dir)
+    if strategy not in available_strategies:
         raise ValueError(f"Unsupported strategy: {strategy}")
 
     session_dir = resolve_session_dir(system_dir, strategy)
@@ -94,6 +117,7 @@ def start_driver_with_strategy(
         system_dir=system_dir,
         strategy=strategy,
         session=session,
+        available_strategies=available_strategies,
         log_path=log_path,
         session_dir=session_dir,
         emit=default_emit,
@@ -113,7 +137,7 @@ def start_driver(system_dir: str, target_error: float = 1e-6, max_loops: int = 1
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", required=True, help="System directory (e.g. experiments/lih)")
-    parser.add_argument("--strategy", choices=VALID_STRATEGIES, default="ga")
+    parser.add_argument("--strategy", default="ga", help=f"Research strategy. Known strategies: {', '.join(VALID_STRATEGIES)}")
     parser.add_argument("--target", type=float, default=1e-6)
     parser.add_argument("--max", type=int, default=100)
     args = parser.parse_args()

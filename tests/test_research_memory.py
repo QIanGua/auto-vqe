@@ -56,23 +56,113 @@ def test_research_memory_store_persists_memory_and_jsonl(tmp_path):
     assert action.action_id == "a1"
 
 
+def test_research_memory_store_tracks_failure_taxonomy(tmp_path):
+    store = ResearchMemoryStore(str(tmp_path / "experiments" / "lih"), str(tmp_path / "state"))
+    decision = DecisionRecord(
+        decision_id="d-fail",
+        iteration=2,
+        hypothesis_id="h2",
+        action_id="a2",
+        decision="discard",
+        summary="Optimization stalled before finding a better candidate.",
+        evidence_against=["No new Pareto point after full optimizer budget."],
+        confidence=0.6,
+        failure_type="optimizer_stall",
+        failure_signals={"actual_steps": 200, "max_steps": 200},
+        followup_actions=["switch_strategy", "reduce_search_space"],
+    )
+    run = RunBundle(
+        action=ActionSpec(
+            action_id="a2",
+            hypothesis_id="h2",
+            system_dir=str(tmp_path / "experiments" / "lih"),
+            action_type="run_strategy",
+            strategy_name="ga",
+            fidelity="quick",
+        ),
+        metrics={"energy_error": 0.02, "num_params": 16},
+        selected_config_path="/tmp/current.json",
+    )
+
+    updated = store.update_from_decision(
+        decision,
+        run,
+        dead_ends=["ga: optimizer_stall at iteration 2"],
+        next_recommendations=["Switch to multidim"],
+        strategy_name="ga",
+    )
+
+    assert updated.failure_counts["optimizer_stall"] == 1
+    assert updated.recent_failure_modes == ["optimizer_stall"]
+    assert [action.action_type for action in updated.pending_actions] == ["switch_strategy", "reduce_search_space"]
+    assert "optimizer_stall" in store.render_markdown(updated)
+
+
+def test_research_memory_store_can_consume_pending_action(tmp_path):
+    store = ResearchMemoryStore(str(tmp_path / "experiments" / "lih"), str(tmp_path / "state"))
+    memory = store.load()
+    memory.pending_actions = [
+        ActionSpec(
+            action_id="queued-1",
+            hypothesis_id="h1",
+            system_dir=str(tmp_path / "experiments" / "lih"),
+            action_type="switch_strategy",
+        )
+    ]
+    store.save(memory)
+
+    updated = store.consume_pending_action("queued-1")
+
+    assert updated.pending_actions == []
+
+
 def test_research_session_preserves_legacy_files_and_metrics(tmp_path):
     system_dir = tmp_path / "experiments" / "lih"
     state_dir = tmp_path / "state"
     session = ResearchSession(str(system_dir), str(state_dir))
 
-    session.log_decision(
-        iteration=2,
-        hypothesis="Shrink layers first",
-        action="ga Search + Run Verification",
-        results={"energy_error": 0.0025, "num_params": 10, "selected_config_path": "/tmp/cfg.json"},
-        decision="keep",
-        rationale="Pareto improvement found.",
+    action_spec = ActionSpec(
+        action_id="legacy-action-2",
+        hypothesis_id="legacy-hypothesis-2",
+        system_dir=str(system_dir),
+        action_type="run_strategy",
+        strategy_name="ga",
+        rationale="ga Search + Run Verification"
     )
-    session.update_brain(
+    session.record_structured_decision(
+        DecisionRecord(
+            decision_id="legacy-decision-2",
+            iteration=2,
+            hypothesis_id="legacy-hypothesis-2",
+            action_id="legacy-action-2",
+            decision="keep",
+            summary="Pareto improvement found.",
+            evidence_for=["energy_error=0.0025", "num_params=10"],
+            confidence=0.5,
+            selected_config_path="/tmp/cfg.json",
+        ),
+        RunBundle(
+            action=action_spec,
+            metrics={"energy_error": 0.0025, "num_params": 10},
+            selected_config_path="/tmp/cfg.json"
+        )
+    )
+    session.apply_structured_outcome(
+        DecisionRecord(
+            decision_id="legacy-decision-2",
+            iteration=2,
+            hypothesis_id="legacy-hypothesis-2",
+            action_id="legacy-action-2",
+            decision="keep",
+            summary="Pareto improvement found.",
+        ),
+        RunBundle(
+            action=action_spec,
+            metrics={"energy_error": 0.0025, "num_params": 10},
+            selected_config_path="/tmp/cfg.json"
+        ),
         objective="Optimize LiH ansatz to below 1e-6.",
         best_config={"layers": 2, "entanglement": "linear"},
-        best_energy_error=0.0025,
         dead_ends=["full entanglement at 4 layers"],
         next_hypotheses=["Compare medium fidelity reruns"],
     )
@@ -86,7 +176,7 @@ def test_research_session_preserves_legacy_files_and_metrics(tmp_path):
 
     memory = json.loads(state_dir.joinpath("research_memory.json").read_text(encoding="utf-8"))
     assert memory["best_energy_error"] == 0.0025
-    assert memory["best_num_params"] is None
+    assert memory["best_num_params"] == 10
     assert memory["next_recommendations"] == ["Compare medium fidelity reruns"]
     md = state_dir.joinpath("autoresearch.md").read_text(encoding="utf-8")
     assert "Optimize LiH ansatz to below 1e-6." in md

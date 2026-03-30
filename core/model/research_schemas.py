@@ -4,6 +4,16 @@ from pydantic import BaseModel, Field
 
 from core.model.schemas import EvaluationResult
 
+FailureType = Literal[
+    "execution_failure",
+    "optimizer_stall",
+    "gradient_collapse",
+    "warmstart_failure",
+    "parameter_inefficiency",
+    "no_pareto_improvement",
+    "adapt_saturation",
+]
+
 
 class HypothesisSpec(BaseModel):
     """Structured research hypothesis for one iteration or branch."""
@@ -59,6 +69,8 @@ class DecisionRecord(BaseModel):
     evidence_for: List[str] = Field(default_factory=list)
     evidence_against: List[str] = Field(default_factory=list)
     confidence: float = 0.5
+    failure_type: Optional[FailureType] = None
+    failure_signals: Dict[str, Any] = Field(default_factory=dict)
     selected_config_path: Optional[str] = None
     selected_candidate_id: Optional[str] = None
     followup_actions: List[str] = Field(default_factory=list)
@@ -77,7 +89,10 @@ class ResearchMemory(BaseModel):
     accepted_hypotheses: List[str] = Field(default_factory=list)
     rejected_hypotheses: List[str] = Field(default_factory=list)
     dead_ends: List[str] = Field(default_factory=list)
+    recent_failure_modes: List[FailureType] = Field(default_factory=list)
+    failure_counts: Dict[FailureType, int] = Field(default_factory=dict)
     transferable_insights: List[str] = Field(default_factory=list)
+    pending_actions: List[ActionSpec] = Field(default_factory=list)
     strategy_stats: Dict[str, Any] = Field(default_factory=dict)
     last_decision: Optional[DecisionRecord] = None
     next_recommendations: List[str] = Field(default_factory=list)

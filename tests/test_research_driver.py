@@ -76,6 +76,7 @@ def test_start_driver_resumes_from_latest_iteration(monkeypatch, tmp_path):
         return str(session_dir)
 
     monkeypatch.setattr(research_runtime, "resolve_session_dir", fake_resolve_session_dir)
+    monkeypatch.setattr(research_runtime, "discover_available_strategies", lambda system_dir: ("ga", "multidim", "qubit_adapt"))
 
     class DummyAgent:
         def __init__(self, **kwargs):
@@ -96,6 +97,7 @@ def test_start_driver_resumes_from_latest_iteration(monkeypatch, tmp_path):
 
     assert called["kwargs"]["session_dir"] == str(tmp_path / "ga_session")
     assert called["kwargs"]["log_path"] == str(tmp_path / "ga_session" / "driver.log")
+    assert called["kwargs"]["available_strategies"] == ("ga", "multidim", "qubit_adapt")
     assert called["run"][:3] == (1, 5, 1e-6)
 
 
@@ -112,3 +114,13 @@ def test_runtime_resolve_session_dir_reuses_existing_pointer(tmp_path):
     resolved = research_runtime.resolve_session_dir(str(system_dir), strategy)
 
     assert resolved == str(existing)
+
+
+def test_runtime_discovers_available_strategies_from_manifest():
+    lih_strategies = research_runtime.discover_available_strategies("experiments/lih")
+    tfim_strategies = research_runtime.discover_available_strategies("experiments/tfim")
+
+    assert "adapt" in lih_strategies
+    assert "qubit_adapt" in lih_strategies
+    assert "adapt" not in tfim_strategies
+    assert "qubit_adapt" in tfim_strategies
